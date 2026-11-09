@@ -3,6 +3,13 @@ title: Changelog
 description: Release notes of the roadbeat MCP Gateway — new tools and endpoints, sign-in and security changes, and known limitations.
 ---
 
+<Update label="2026-11-09" description="Anomaly detection" tags={["security", "feature"]}>
+## Anomaly detection
+
+- The gateway watches each account × app for unusual patterns inside the rate limits: data bursts, enumeration, a storm of refused calls, and actions the user keeps declining. See [Operations › Anomaly detection](/self-hosting/operations#anomaly-detection).
+- Each anomaly becomes an audit record of type `anomaly` and the metric `mcp_anomalies_total`. With `ANOMALY_ACTION=throttle` the app is also paused for 15 minutes; admins lift a pause in the audit log (**Lift pause**) or with `POST /api/v1/admin/anomalies/lift`.
+</Update>
+
 <Update label="2026-11-09" description="Content Pod tools, daily data quota" tags={["feature", "security"]}>
 ## Content Pod through Studio, daily data quota
 

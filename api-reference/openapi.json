@@ -189,7 +189,8 @@
                 "prompt_get",
                 "consent",
                 "confirmation",
-                "admin"
+                "admin",
+                "anomaly"
               ]
             },
             "description": "Entry kind."
@@ -515,6 +516,65 @@
           }
         ],
         "description": "Revokes every active consent of a principal — for all OAuth clients, or only for `clientId`. Use it when a user asks to cut off all AI apps at once."
+      }
+    },
+    "/api/v1/admin/anomalies/lift": {
+      "post": {
+        "operationId": "AdminController_liftPause",
+        "summary": "Lift an anomaly pause",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiftPauseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "lifted": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "With `ANOMALY_ACTION=throttle`, an app that triggered anomaly detection is paused for `ANOMALY_COOLDOWN_SEC`. This lifts the pause of one account × app at once. Recorded in the audit log as `anomaly.lift`."
       }
     },
     "/api/v1/admin/principals/{principalId}/export": {
@@ -1762,7 +1822,8 @@
               "prompt_get",
               "consent",
               "confirmation",
-              "admin"
+              "admin",
+              "anomaly"
             ]
           },
           "name": {
@@ -2097,6 +2158,23 @@
           "clientId": {
             "type": "string",
             "description": "Only the consents given to this AI app (OAuth client id); omit for every app"
+          }
+        }
+      },
+      "LiftPauseDto": {
+        "type": "object",
+        "required": [
+          "principalId",
+          "clientId"
+        ],
+        "properties": {
+          "principalId": {
+            "type": "string",
+            "description": "The paused account (principal id)."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "The paused app (OAuth client id)."
           }
         }
       }

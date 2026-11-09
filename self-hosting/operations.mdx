@@ -41,6 +41,7 @@ curl -s https://mcp.example.com/api/v1/health
 | `mcp_consent_decisions_total` | `decision` | Consent required / granted / denied |
 | `mcp_confirmations_total` | `mode`, `outcome` | Confirmations by dialog or approval page |
 | `mcp_idempotent_replays_total` | `tool` | Retries answered from the idempotency store |
+| `mcp_anomalies_total` | `kind`, `principal_type`, `action` | Anomalies detected (`data_burst`, `enumeration`, `denial_storm`, `declined_confirmations`), `flagged` or `throttled` — alert on any increase |
 | `mcp_backend_latency_seconds` | `service`, `op`, `outcome` | Latency of upstream roadbeat calls (histogram) |
 | `mcpgw_*` | — | Node.js process metrics |
 
@@ -60,6 +61,29 @@ curl -s "https://mcp.example.com/api/v1/admin/audit?kind=tool_call&name=studio_p
 ```
 
 Follow `nextCursor` for older entries. The [admin UI](/self-hosting/admin-ui) shows the same log with filters and exports it as JSON or CSV.
+
+## Anomaly detection
+
+Rate limits and the daily data quota cap *how much* an app may do. Anomaly detection looks for *patterns* inside those limits that point to a misused or prompt-injected AI app. It watches each account × app (anonymous callers: per network address):
+
+| Anomaly | Signal | Default threshold |
+|---------|--------|-------------------|
+| `data_burst` | Size of the answers an app receives | A quarter of its daily quota within one hour |
+| `enumeration` | Single-item reads — get / fetch tools and resource reads, not searches or lists | 1,000 per hour |
+| `denial_storm` | Refused calls: missing scope (step-up challenges), wrong account type, upstream 403 | 20 per 10 minutes |
+| `declined_confirmations` | Confirmations and consents the user declined, in the app or on the approval page | 3 per 10 minutes |
+
+Each anomaly is reported **once per window**: an audit record of type `anomaly` (name = the anomaly, payload with the value, threshold and window), the `mcp_anomalies_total` metric and a warning in the log. Thresholds are set in the [configuration](/self-hosting/configuration#limits-and-anomaly-detection).
+
+With `ANOMALY_ACTION=throttle` the gateway also **pauses the app** for `ANOMALY_COOLDOWN_SEC` (15 minutes by default). The user's other apps keep working. During the pause, calls answer *"Unusual activity from this app was paused for N minute(s) to protect the account."* An admin can lift the pause early: open the anomaly in the [admin UI](/self-hosting/admin-ui) audit log and choose **Lift pause**, or call the Admin API:
+
+```bash
+curl -s -X POST https://mcp.example.com/api/v1/admin/anomalies/lift   -H "Authorization: Bearer <token with mcp:admin>" -H "Content-Type: application/json"   -d '{"principalId":"<principal>","clientId":"<OAuth client id>"}'
+```
+
+<Callout kind="tip">
+  Start with `flag` and look at the `anomaly` records for a week or two. Raise thresholds that fire for normal use, then switch to `throttle`.
+</Callout>
 
 ## Catalog switches
 

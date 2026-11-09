@@ -52,6 +52,10 @@ On top of the call limits, the gateway counts the **size of the answers** each a
 
 Once an app has used its share, further calls answer *"The daily data limit for this app is reached. It resets at midnight UTC."* Your other apps keep their own quota. Operators set the numbers with `QUOTA_BYTES_PER_DAY_USER`, `QUOTA_BYTES_PER_DAY_SERVICE` and `QUOTA_BYTES_PER_DAY_ANONYMOUS` (`0` turns the quota off).
 
+## Unusual activity
+
+The gateway also watches for patterns that point to a misused AI app — for example thousands of single items read in an hour, many calls refused for missing permissions, or actions you keep declining. Operators see these as anomalies. Depending on the gateway's setting, the app may be **paused** for a few minutes; calls then answer *"Unusual activity from this app was paused for N minute(s) to protect the account."* Your other apps are not affected, and an administrator can lift the pause.
+
 ## Result sizes and paging
 
 The gateway keeps every answer small enough for the context window of today's assistants:

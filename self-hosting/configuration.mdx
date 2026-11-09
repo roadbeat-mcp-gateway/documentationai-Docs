@@ -92,6 +92,23 @@ When several issuers are advertised, the MCP client chooses which one to use for
 | `APPROVAL_TTL_SEC` | `600` | Lifetime of approval links and MRTR request state (10 minutes). |
 | `IDEMPOTENCY_TTL_SEC` | `86400` | How long write results are replayed for a repeated `idempotencyKey` (24 hours); the retention job deletes them afterwards. |
 
+## Limits and anomaly detection
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `QUOTA_BYTES_PER_DAY_USER` | `209715200` (200 MB) | Bytes of tool results per account × app and UTC day. `0` turns the quota off. |
+| `QUOTA_BYTES_PER_DAY_SERVICE` | `1073741824` (1 GB) | The same for machine clients. |
+| `QUOTA_BYTES_PER_DAY_ANONYMOUS` | `20971520` (20 MB) | The same for anonymous callers, per network address. |
+| `ANOMALY_DETECTION` | `true` | Watch every account × app for unusual patterns (see [Anomaly detection](/self-hosting/operations#anomaly-detection)). The local sidecar is never watched. |
+| `ANOMALY_ACTION` | `flag` | `flag` records the anomaly (audit, metric, log). `throttle` also pauses the app for the cooldown. |
+| `ANOMALY_COOLDOWN_SEC` | `900` | How long `throttle` pauses an app (at least 60 s). |
+| `ANOMALY_HOURLY_BYTES_SHARE` | `0.25` | **Data burst:** this share of the daily quota received within one hour. |
+| `ANOMALY_READS_PER_HOUR` | `1000` | **Enumeration:** single-item reads (get / fetch tools, resource reads) per hour. |
+| `ANOMALY_DENIALS_PER_10MIN` | `20` | **Probing:** refused calls (missing scope, wrong account type, upstream 403) per 10 minutes. |
+| `ANOMALY_DECLINES_PER_10MIN` | `3` | **Declined confirmations:** confirmations or consents the user declined per 10 minutes. |
+
+Every threshold accepts `0` to switch that signal off. With `REDIS_URL` set, all instances share the counters.
+
 ## Retention
 
 | Variable | Default | Description |
