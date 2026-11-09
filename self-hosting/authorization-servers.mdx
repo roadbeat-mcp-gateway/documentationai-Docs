@@ -93,6 +93,7 @@ The Web Client's **Connected AI apps** page can show a card that helps users con
 |----------|---------|-------------|
 | `MCP_GATEWAY_URL` | `https://mcp.example.com` | Public base URL of the gateway, **without** `/mcp`. The card shows `<MCP_GATEWAY_URL>/mcp` — list that URL in `OAUTH_GATEWAY_RESOURCES` too. Unset = no card (the list of connected apps stays). |
 | `MCP_GATEWAY_MCPB_URL` | `https://mcp.example.com/downloads/roadbeat.mcpb` | Optional download URL of the [Claude Desktop extension](/connect/claude-desktop-extension). Unset = no extension tab. |
+| `MCP_GATEWAY_API_URL` | `http://mcp-gateway-api:3700` | Optional internal URL for the Web Client's calls to the gateway's self-service API (consents on the Connected AI apps page, erasure of deleted accounts). Default: `MCP_GATEWAY_URL`. Studio reads the same variable for its erasure call; otherwise it uses the origin of the `/mcp` entry in `OAUTH_GATEWAY_RESOURCES`. |
 
 The web app reads both from the public endpoint `GET /api/v1/config/mcp`.
 

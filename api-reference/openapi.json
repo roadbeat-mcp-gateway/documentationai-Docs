@@ -1022,6 +1022,109 @@
         ],
         "description": "Public. Tells the admin UI at `/admin` where to sign in: the authorization server (resolved from its metadata by the gateway), the UI's public client id, the resource and the `mcp:admin` scope. `configured: false` when no suitable issuer is set."
       }
+    },
+    "/api/v1/me/consents": {
+      "get": {
+        "operationId": "MeController_consents",
+        "summary": "The consents the signed-in user gave to AI apps (active ones only)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "self-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Lists the active consents the signed-in user gave AI apps at this gateway: client id and name, consent class, lifetime, expiry. Any user access token for the gateway works (audience = the root `/mcp` resource). The Web Client calls it for its Connected AI apps page."
+      }
+    },
+    "/api/v1/me/consents/{id}": {
+      "delete": {
+        "operationId": "MeController_revoke",
+        "summary": "Revoke one of the signed-in user’s consents",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "self-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Revokes one of the caller’s own consents (404 for consents of other users). The app asks again the next time it needs it. Audited."
+      }
+    },
+    "/api/v1/me/consents/revoke-all": {
+      "post": {
+        "operationId": "MeController_revokeAll",
+        "summary": "Revoke the signed-in user’s consents — for one AI app or for every app",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeMineDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "self-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Revokes the caller’s consents for one AI app (`clientId`) or for every app. Audited."
+      }
+    },
+    "/api/v1/me/erase": {
+      "post": {
+        "operationId": "MeController_erase",
+        "summary": "Account deletion hook: erase everything the gateway keeps about the signed-in user (consents, confirmations, idempotent results, tasks; audit records pseudonymized). Only for tokens the authorization server minted for its own backend (Studio / Web Client when they delete an account) — never for tokens of AI apps.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "self-service"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Account-deletion hook: erases everything the gateway keeps about the caller — consents, confirmations, idempotent results and tasks are deleted, audit records are re-keyed to a random pseudonym. Only for tokens the authorization server minted for its own backend (claim `rb_first_party`, used by Studio and the Web Client when they delete an account); tokens of AI apps get 403."
+      }
     }
   },
   "info": {
@@ -1053,6 +1156,10 @@
     {
       "name": "health",
       "description": "Public liveness and readiness probes."
+    },
+    {
+      "name": "self-service",
+      "description": "The signed-in user’s own consents, and the account-deletion hook for the roadbeat services."
     }
   ],
   "servers": [
@@ -1981,6 +2088,15 @@
           "error": {
             "type": "string",
             "example": "Forbidden"
+          }
+        }
+      },
+      "RevokeMineDto": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "description": "Only the consents given to this AI app (OAuth client id); omit for every app"
           }
         }
       }

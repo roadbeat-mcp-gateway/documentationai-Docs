@@ -1,6 +1,6 @@
 ---
 title: Prompts & Skills
-description: Ready-made prompts and Skills over MCP for research and Compass — what they do, where they appear, and the prompt twins for other clients.
+description: Ready-made prompts and Skills over MCP for research, Compass and Studio editors — what they do, where they appear, and the prompt twins for other clients.
 ---
 
 Besides tools, the gateway offers **prompts** (single starting points your client can show in a menu) and **skills** (multi-step workflows a capable assistant loads on demand). Every skill has a prompt twin, so no client misses a workflow.
@@ -13,6 +13,13 @@ Besides tools, the gateway offers **prompts** (single starting points your clien
 | `discovery_summarize_results` | *Summarize search results*: the top N results of a query as cited bullet points | `query`, optional `count` (1–20, default 5), `language` | all | |
 | `compass_weekly_review` | *Weekly Compass review*: progress per active goal, the most useful new items, one next step, optional new goals | optional `language` | personal, local | ✓ |
 | `compass_onboarding` | *Set up my first goals*: find templates for what matters to you and add your first goals after you agree | optional `language` | personal, local | ✓ |
+| `studio_draft_news_article` | *Draft a news article in Studio*: pick the news type and locale, write headline, lead and body from your notes (open questions marked `[TODO]`), validate, save as a draft after you have seen it | `topic`, optional `angle`, `sources`, `locale`, `language` | organization | |
+| `studio_review_translation` | *Review a translation*: compare a target locale with the source field by field, list problems with suggested fixes and a verdict; changes only after you agree | `contentId`, `targetLocale`, optional `language` | organization | |
+| `studio_localize_to_locale` | *Localize content to a locale*: translate (machine translation as a dry run first, if configured) and adapt to the locale's readers; saves a new version after you agree, never publishes | `contentId`, `targetLocale`, optional `language` | organization | |
+| `newsroom_research` | Prompt twin of the `newsroom-research` skill | `topic`, optional `region`, `language` | organization | |
+| `editorial_localization` | Prompt twin of the `editorial-localization` skill | `contentId`, `targetLocales` (e.g. `fr, it`), optional `language` | organization | |
+
+The Studio prompts appear on `/mcp/studio` and `/mcp/all` for organization accounts (Studio sign-in). They never publish on their own — publishing stays a separate step that asks you to confirm.
 
 How you start a prompt depends on the client — for example the `/` menu in Claude Code (`/mcp__roadbeat__compass_weekly_review`) or the attachment menu in Claude.
 
@@ -34,15 +41,23 @@ Skills are `SKILL.md` documents with a step-by-step workflow and rules. The gate
   <Expandable title="compass-onboarding — set up the first goals" default-open="false">
     Check existing goals, ask which life areas matter, find templates with `cd_search_goal_templates` / `cd_get_goal_template`, propose two or three goals with parameters and time horizons, add them only after agreement (fresh `idempotencyKey` each), then show first matching content. Personal accounts and the local sidecar.
   </Expandable>
+  <Expandable title="newsroom-research — research a story, then write a sourced draft" default-open="false">
+    Search the Discovery Nodes (`discovery_search` with facets, newest first), read the best teasers, check with `studio_list_content` whether your organization already covered the story (then propose an update instead of a duplicate), and give the editor a brief — known facts with URLs, disputed points, gaps, a proposed angle. Only after the editor agrees: write the draft in the news content type, cite sources, validate and save it with `studio_create_draft`. Never publishes, never invents quotes or figures, quotes other publishers only briefly with attribution. Organization accounts.
+  </Expandable>
+  <Expandable title="editorial-localization — translate, review, publish on request" default-open="false">
+    One target locale at a time: check the locale is enabled (`studio_list_locales`), read the gaps (`studio_get_translation_status`), translate (`studio_translate_content` as a dry run when a provider is configured, otherwise the assistant's own translation), review like an editor (meaning, terminology, tone, formats, untouched names, links and markup), show a summary and save only after approval. Publishes only when asked — with your confirmation — and then checks the Discovery Nodes. A version conflict means someone else edited the item: re-read, never overwrite. Organization accounts.
+  </Expandable>
 </ExpandableGroup>
 
 Where skills appear:
 
 | Endpoint | Skills |
 |----------|--------|
-| `/mcp`, `/mcp/all` | `discovery-research`, plus the Compass skills for personal accounts and the local sidecar |
+| `/mcp` | `discovery-research`, plus the Compass skills for personal accounts and the local sidecar |
+| `/mcp/all` | `discovery-research`, plus the Compass skills for personal accounts and the local sidecar, plus the Studio skills for organization accounts |
 | `/mcp/discovery` | `discovery-research` |
 | `/mcp/goals`, `/mcp/cd` | `discovery-research`, plus the Compass skills for personal accounts and the local sidecar |
-| `/mcp/schema`, `/mcp/studio` | none |
+| `/mcp/studio` | `newsroom-research`, `editorial-localization` (organization accounts) |
+| `/mcp/schema` | none |
 
 Skills contain no personal data; they are public and cached for an hour. Every skill tells the assistant to treat teaser text as untrusted and never to change your data without your agreement.

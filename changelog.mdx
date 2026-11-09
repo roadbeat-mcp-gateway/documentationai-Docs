@@ -3,6 +3,16 @@ title: Changelog
 description: Release notes of the roadbeat MCP Gateway — new tools and endpoints, sign-in and security changes, and known limitations.
 ---
 
+<Update label="2026-11-09" description="Studio prompts & skills, consents in the web app, automatic erasure" tags={["feature", "security"]}>
+## Editorial workflows, consents you can see, erasure on account deletion
+
+- **Studio prompts:** `studio_draft_news_article`, `studio_review_translation`, `studio_localize_to_locale` (English / German). **Studio skills:** `newsroom-research` (research on the Discovery Nodes, brief, sourced draft) and `editorial-localization` (translate, review, publish on request), with prompt twins. On `/mcp/studio` and `/mcp/all` for organization accounts; `/mcp/studio` also lists `discovery_search` and `discovery_get_teaser`. See [Prompts & Skills](/tools/prompts-and-skills).
+- **Consents in the web app:** the *Connected AI apps* page shows under each app what it may do without asking, with a *Revoke* button; disconnecting an app also revokes its consents. New self-service endpoints `GET /api/v1/me/consents`, `DELETE /api/v1/me/consents/{id}`, `POST /api/v1/me/consents/revoke-all`.
+- **Automatic erasure:** deleting a roadbeat account (Studio or web app) now erases it at the gateway too (`POST /api/v1/me/erase`, only for the roadbeat services themselves) and disconnects its AI apps.
+- **Studio audit:** changes an AI assistant makes through the gateway are marked as such in Studio's events and the Pro audit log.
+- **Conformance:** the official MCP conformance suite runs on every build.
+</Update>
+
 <Update label="2026-11-09" description="The hosted gateway is live" tags={["feature"]}>
 ## roadbeat MCP Gateway at mcp.roadbeat.net
 

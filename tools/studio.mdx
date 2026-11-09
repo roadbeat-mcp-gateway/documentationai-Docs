@@ -5,7 +5,7 @@ description: Read, draft, validate and publish your organization's content in ro
 
 The Studio tools let an assistant work in **your organization's** roadbeat Studio: find and read content, create schema-valid drafts, and publish after you confirm. They are available only when you sign in with your **Studio account** over HTTP (not in the local sidecar).
 
-Endpoint: `/mcp/studio` (all Studio tools including the typed ones) and `/mcp/all` (generic tools only). No Studio tool is part of the core set.
+Endpoint: `/mcp/studio` (all Studio tools including the typed ones) and `/mcp/all` (generic tools only). No Studio tool is part of the core set. For the research step of the newsroom workflow, `/mcp/studio` also lists `discovery_search` and `discovery_get_teaser`. Editorial prompts and skills: see [Prompts & Skills](/tools/prompts-and-skills).
 
 <Callout kind="info">
   **Studio stays in charge.** The gateway exchanges your app's token for a five-minute Studio token that names the gateway as the acting party. Studio then checks your role and the granted scopes again, and accepts such tokens only on its content, content-type, publishing, translation, locale and media library endpoints (and to look up who you are). Everything else — including sign-in, connected apps, OAuth client settings and the translation provider settings — refuses them.

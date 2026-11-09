@@ -25,6 +25,7 @@ All REST endpoints live under `/api/v1/`. Every gateway also serves this referen
 |-------|-----------|--------|
 | **Admin** | `GET /api/v1/admin/clients`, `GET /api/v1/admin/activity`, `GET /api/v1/admin/audit`, `GET`/`POST /api/v1/admin/consents`, `DELETE /api/v1/admin/consents/{id}`, `POST /api/v1/admin/consents/revoke-all`, `GET /api/v1/admin/principals/{principalId}/export`, `POST /api/v1/admin/principals/{principalId}/erase`, `GET /api/v1/admin/confirmations`, `GET /api/v1/admin/catalog`, `PUT /api/v1/admin/catalog/{kind}/{name}` | `mcp:admin` |
 | **Integration Hub** | `GET /api/v1/catalog`, `GET`/`POST /api/v1/consents` | `mcp:admin` |
+| **Self-service** | `GET /api/v1/me/consents`, `DELETE /api/v1/me/consents/{id}`, `POST /api/v1/me/consents/revoke-all` — the caller's own consents only; `POST /api/v1/me/erase` — account-deletion hook, only for tokens the authorization server minted for its own backend (`rb_first_party`), AI apps get 403 | any user token for the gateway |
 | **System** | `GET /api/v1/health`, `GET /api/v1/health/ready`, `GET /api/v1/admin-ui/config` | public |
 
 ## Authentication
