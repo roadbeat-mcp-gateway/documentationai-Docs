@@ -29,12 +29,14 @@ The gateway is configured entirely through environment variables. They are valid
 | `MCP_ALLOWED_ORIGINS` | `localhost`, `127.0.0.1`, `[::1]` and the host of `PUBLIC_BASE_URL` | Comma-separated hostnames allowed as browser `Origin` on `/mcp`. Requests without `Origin` (most MCP clients) always pass. |
 | `MCP_LEGACY_STATELESS` | `true` | Serve MCP `2025-11-25` clients statelessly next to `2026-07-28` clients. `false` rejects legacy clients. |
 | `MCP_MAX_BODY_BYTES` | `4194304` | Maximum request body (4 MiB). |
+| `MCP_MAX_LISTEN_STREAMS` | `1024` | Open `subscriptions/listen` streams per endpoint and instance. Streams get `list_changed` when an admin enables or disables a catalog entry (every instance re-reads the overrides once a minute) or a Studio gains or loses a Pro plugin. |
 
 ## Authorization
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AUTH_ISSUERS` | — | JSON array of trusted authorization servers — see below. |
+| `SERVICE_CLIENTS` | — | Machine clients (OAuth client credentials) allowed to call the gateway — **deny by default**. JSON array, e.g. `[{"clientId":"ops-export","issuer":"studio","scopes":["mcp:admin"],"ips":["10.0.0.0/24"]}]`; `issuer` (an `AUTH_ISSUERS` name), `scopes` (a cap) and `ips` (addresses / CIDR ranges, IPv4 and IPv6) are optional. See [Authorization servers](/self-hosting/authorization-servers#machine-clients). |
 | `GATEWAY_OAUTH_CLIENT_ID` | `roadbeat-mcp-gateway` | Client id of the gateway's own confidential client at the authorization servers (used for token exchange only). |
 | `GATEWAY_OAUTH_KEY` | — | Private ES256 (EC P-256) JWK of that client, as JSON or base64. Without it, no upstream user calls are possible over HTTP (personal and Studio tools fail). |
 | `GATEWAY_OAUTH_KEY_FILE` | — | Alternative: path to a file with that JWK. |

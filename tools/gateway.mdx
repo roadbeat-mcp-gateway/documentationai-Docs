@@ -86,6 +86,18 @@ Returns the number of `revoked` consents and the `scope` (`this_app` or `all_app
   Revoking consents does not disconnect the app — it can still use public tools and ask you again. To cut an app off completely, use **Connected AI apps** in your roadbeat account (see [Accounts & Sign-in](/accounts/sign-in#disconnect-an-app)).
 </Callout>
 
+## Background tasks
+
+Bulk tools (`studio_bulk_publish`, `studio_bulk_translate`) start a background task and return its `taskId`. These tools follow it — on `/mcp/studio` and `/mcp/all`, for your own tasks only:
+
+| Tool | What it does |
+|------|--------------|
+| `gateway_get_task` | Status (`working`, `completed`, `failed`, `cancelled`), counts (`done`, `failed`, `skipped` of `total`) and the outcome per item |
+| `gateway_list_tasks` | Your tasks, newest first, without per-item details |
+| `gateway_cancel_task` | Stop a running task after the item it is working on; finished items stay done |
+
+Finished tasks are kept for a day. A task whose gateway instance stopped is marked failed after ten minutes.
+
 ## Resources
 
 - **`gateway://me`** — the same information as `gateway_whoami` (JSON, never cached) for clients that prefer attaching context over calling tools.

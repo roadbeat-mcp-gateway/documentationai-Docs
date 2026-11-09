@@ -3,6 +3,16 @@ title: Changelog
 description: Release notes of the roadbeat MCP Gateway — new tools and endpoints, sign-in and security changes, and known limitations.
 ---
 
+<Update label="2026-11-09" description="Bulk jobs, Studio AI, machine clients, performance" tags={["feature", "security"]}>
+## Background tasks, Studio AI, machine clients, faster catalog
+
+- **Bulk jobs:** `studio_bulk_publish` (confirmed once for up to 50 items) and `studio_bulk_translate` run as background tasks; follow them with `gateway_get_task`, `gateway_list_tasks`, `gateway_cancel_task`. See [Studio](/tools/studio#bulk-jobs).
+- **Studio AI (Studio Pro):** with the pro-ai plugin, its AI capabilities appear as `studio_ai_*` tools and run through your organization's AI gateway (budget, redaction, audit).
+- **Machine clients:** OAuth client credentials for automation — deny by default at the gateway (`SERVICE_CLIENTS`, with scope caps and network pinning). See [Authorization servers](/self-hosting/authorization-servers#machine-clients).
+- **Live catalog updates:** open `subscriptions/listen` streams are told when an admin enables or disables a tool, or a Studio gains or loses a Pro plugin.
+- **Performance:** per-request overhead 4–6 ms (p95); `tools/list` about three times faster under load.
+</Update>
+
 <Update label="2026-11-09" description="Studio prompts & skills, consents in the web app, automatic erasure" tags={["feature", "security"]}>
 ## Editorial workflows, consents you can see, erasure on account deletion
 

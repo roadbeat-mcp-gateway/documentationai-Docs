@@ -131,6 +131,31 @@ curl -s https://mcp.example.com/.well-known/oauth-protected-resource/mcp
 }
 ```
 
+## Machine clients
+
+Automation without a person — an ops job exporting the audit log, a monitoring check — uses the **OAuth client-credentials grant** (MCP extension `io.modelcontextprotocol/oauth-client-credentials`):
+
+<Steps>
+  <Step title="Allow the grant at Studio">
+    Set `OAUTH_CLIENT_CREDENTIALS_SCOPES` to the scopes machine clients may get, e.g. `discovery:read,schema:read,mcp:admin`. Unset keeps the grant off.
+  </Step>
+  <Step title="Register the client">
+    Add it to `OAUTH_CLIENTS` as a confidential client:
+
+    ```json
+    {"client_id":"ops-export","grant_types":["client_credentials"],"response_types":[],"redirect_uris":[],
+     "token_endpoint_auth_method":"private_key_jwt","jwks":{"keys":[{"kty":"EC","crv":"P-256","x":"…","y":"…","kid":"ops-1"}]}}
+    ```
+
+    To rotate its key, list the new and the old key in `jwks`, switch the client over, then remove the old one. A client secret (`client_secret_basic`) works too.
+  </Step>
+  <Step title="Allow it at the gateway">
+    List it in the gateway's `SERVICE_CLIENTS`, optionally with a scope cap and the networks it may call from. Unlisted machine clients are refused.
+  </Step>
+</Steps>
+
+The client gets a token at Studio's token endpoint (`grant_type=client_credentials`, `resource=https://<gateway>/mcp`). Its tokens carry `rb_service: true`; the gateway treats them as a **service principal**: public tools and, with `mcp:admin`, the [Admin API](/api-reference/overview) — never personal or Studio content tools.
+
 ## Pre-register clients
 
 Apps that publish a **Client ID Metadata Document** (an HTTPS URL as client id, like Claude) need no registration. Others — for example ChatGPT, internal agents, or any client while your authorization server is only reachable on `localhost` — need a pre-registered client. Pre-registered clients are public clients (PKCE, no secret).

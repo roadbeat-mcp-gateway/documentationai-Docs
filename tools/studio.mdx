@@ -227,6 +227,21 @@ These tools appear only when your organization's Studio runs the **pro-workflows
 
 Studio enforces the workflow's rules for AI assistants exactly as for people: role gates, mandatory comments, and — when your workflow is set up that way — that nobody approves their own work. Starting a workflow and other steps (for example sending back to draft) stay in Studio.
 
+## Bulk jobs
+
+Publishing or translating many items runs as a **background task**: the tool answers at once with a `taskId`, and the assistant follows it with [`gateway_get_task`](/tools/gateway#background-tasks) until it is finished. Items run one after another through the same Studio checks as the single-item tools; an item that fails is reported and does not stop the others.
+
+| Tool | What it does | Scope |
+|------|--------------|-------|
+| `studio_bulk_publish` | Publish (or with `action: "unpublish"` take offline) up to 50 items — **asks you to confirm once** for the whole batch | `studio:publish` |
+| `studio_bulk_translate` | Machine-translate up to 50 items into one locale, each saved as a new version (refused when no translation provider is configured) | `studio:write` |
+
+Both accept an `idempotencyKey`: repeating the call returns the same task instead of starting another.
+
+## Studio AI (Studio Pro)
+
+When your organization's Studio runs the **pro-ai** plugin, its AI capabilities appear as tools — for example `studio_ai_translate`, `studio_ai_summarize`, `studio_ai_classify`, `studio_ai_extract` and `studio_ai_alt_text` (the list comes from your Studio). They run through your organization's AI gateway in Studio: its AI provider, budget, PII redaction and audit apply. They need `studio:write` and the consent class Studio declares (usually *network_call*, so the gateway asks you once per app). Results are AI-generated and marked untrusted.
+
 ## Typed tools: `studio_create_<type>`
 
 On `/mcp/studio`, the gateway adds one **typed** draft tool per content type — for example `studio_create_news` or `studio_create_event`. Its input schema *is* the content type's JSON Schema (with the referenced shared definitions inlined), so the assistant sees every field, type and constraint without reading a schema first.
