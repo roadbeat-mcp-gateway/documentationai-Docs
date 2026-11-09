@@ -1,0 +1,77 @@
+---
+title: Admin UI
+description: The gateway's built-in admin interface at /admin — sign-in with mcp:admin, AI clients, audit log, consents, catalog and GDPR data requests.
+---
+
+Every gateway serves a web interface for its operators at **`/admin`** — for example `https://mcp.example.com/admin/`. It shows which AI apps use the gateway, what they did, which consents people gave, and lets you switch tools off or answer data-protection requests. It is available in **all 24 official EU languages** (picked from your browser; the language menu in the header lists each language by its own name, e.g. *Deutsch*, *Français*, *Polski*) and works in light and dark mode and on small screens.
+
+<Callout kind="info">
+  The admin UI uses the same [Admin API](/api-reference/overview) you can call yourself. Everything it changes is written to the audit log with your account as the acting admin.
+</Callout>
+
+## Who can sign in
+
+Only accounts that receive the **`mcp:admin`** scope. The roadbeat Studio authorization server grants it to **platform super admins** only — organization admins cannot see other organizations' audit data, so they do not get it. On the Studio consent screen it reads *Administer the roadbeat MCP Gateway: audit log, consents of all users, tool catalog*.
+
+Signed-in accounts without the scope see *No admin permission*.
+
+## Sign-in
+
+The UI signs in with **OAuth 2.1 authorization code + PKCE** as a public client at the Studio authorization server, for the gateway's `/mcp` resource and the scope `mcp:admin`:
+
+1. **Sign in with studio** sends you to Studio's sign-in and consent screen.
+2. After **Allow**, Studio returns to `/admin/callback`; the UI checks that the answer comes from the expected authorization server (RFC 9207 `iss`) and the same browser tab.
+3. Tokens are kept in the tab's session storage only. The refresh token rotates on every use, and **Sign out** revokes it at the authorization server.
+
+## Pages
+
+| Page | What you can do |
+|------|-----------------|
+| **Overview** | Number of AI clients, active consents, pending confirmations and enabled tools; recent activity |
+| **Clients** | Every AI app (OAuth client) that called the gateway, with the name and version it reports, issuer, registration type, first and last seen; jump to its activity or consents |
+| **Audit log** | Filter by principal, client, type, exact name and time range; open the details of a record; **Export JSON** or **Export CSV** of the filtered log (up to 10,000 records; CSV cells are protected against spreadsheet formulas) |
+| **Consents** | What each person allowed each AI app; include revoked and expired ones; **Revoke** one, or **Revoke all consents** of a person (optionally for one client) |
+| **Confirmations** | Consent and confirmation requests and how they were decided — in the AI app or on the approval page |
+| **Catalog** | Every tool, resource and prompt with server, scopes, consent class and behaviour (read-only, destructive, external effect, confirmation); **enable or disable** entries for the whole deployment |
+| **Data requests** | Answer a data-protection request for one person: **Export data (JSON)**, open their audit log or consents, or **Erase** them |
+
+## Operator guide
+
+<Steps>
+  <Step title="Make sure the UI is installed">
+    The Docker image contains the built UI (`./admin-ui`) — nothing to do. When you run from source, build it once with `pnpm --filter @roadbeat/mcp-gateway-web build`; the gateway picks up `apps/web/dist/browser`. Without a build, `/admin` only answers with a short notice.
+  </Step>
+  <Step title="Choose the sign-in server">
+    By default the UI signs in at the `AUTH_ISSUERS` entry with a Studio upstream. Set `ADMIN_UI_ISSUER` (an issuer `name` or `issuer` URL) to choose another one. If none fits, the sign-in page says *Sign-in is not set up*.
+  </Step>
+  <Step title="Let Studio know the UI's client">
+    - **HTTPS gateways:** nothing to register. The UI's client id is a Client ID Metadata Document the gateway serves itself at `${PUBLIC_BASE_URL}/admin/oauth-client.json`; Studio fetches it (keep `OAUTH_CIMD_ENABLED=true` at Studio).
+    - **Plain HTTP (local development):** register a client in Studio under **Platform admin › OAuth clients** — client id `roadbeat-mcp-gateway-admin`, type *web*, redirect URI `${PUBLIC_BASE_URL}/admin/callback` (e.g. `http://localhost:3700/admin/callback`). Use `ADMIN_UI_CLIENT_ID` for a different id.
+  </Step>
+  <Step title="Route /admin">
+    Publish `/admin` and `/admin/*` through your reverse proxy along with `/api/v1/admin/*` and `/api/v1/admin-ui/config`. Restrict them to your admin network if you can.
+  </Step>
+  <Step title="Sign in">
+    Open `https://<gateway>/admin/`, sign in as a platform super admin and allow the gateway administration permission.
+  </Step>
+</Steps>
+
+### Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ADMIN_UI_ENABLED` | `true` | Serve the UI at `/admin`. |
+| `ADMIN_UI_ISSUER` | the issuer with a Studio upstream | Authorization server for the admin sign-in: an `AUTH_ISSUERS` `name` or `issuer`. Startup fails if it names an unknown issuer. |
+| `ADMIN_UI_CLIENT_ID` | HTTPS: `${PUBLIC_BASE_URL}/admin/oauth-client.json` · HTTP: `roadbeat-mcp-gateway-admin` | The UI's public OAuth client id. |
+| `ADMIN_UI_DIR` | `./admin-ui` in the image, `apps/web/dist/browser` in the repository | Directory of the built UI. |
+
+The UI fetches its sign-in settings from the public endpoint `GET /api/v1/admin-ui/config` (authorization server, client id, resource, scope). The page is served with its own Content Security Policy: scripts and styles from the gateway only, network requests only to the gateway and the authorization server's token endpoint, no framing.
+
+## Answering data-protection requests
+
+On **Data requests**, enter the person's principal id as it appears in the audit log (`studio:<id>` or `web-client:<id>`):
+
+- **Export data (JSON)** downloads everything the gateway stores about the person — consents (including revoked ones), approval requests, stored write results (metadata only) and their audit log. People can also export this themselves with the [`gateway_export_my_data`](/tools/gateway#gateway_export_my_data) tool.
+- **Erase** deletes their consents, approval requests, stored write results and tasks. Their audit records are kept for accountability but re-assigned to a random pseudonym (`erased:<uuid>`) with personal details removed; admin records that name the person are re-assigned too. You must type the principal id to confirm, and you cannot erase the account you are signed in with. **This cannot be undone.** Use it when the account was deleted at its authorization server.
+
+See [Privacy & Your Data](/security/privacy) for what the gateway stores and how long.

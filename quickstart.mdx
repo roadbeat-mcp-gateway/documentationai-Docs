@@ -1,0 +1,102 @@
+---
+title: Quickstart
+description: Connect an AI assistant to the roadbeat MCP Gateway, sign in with your roadbeat account and run your first goal-driven search.
+---
+
+In five minutes your assistant will search roadbeat content and — once you sign in — work with your own goals.
+
+## Before you start
+
+You need:
+
+- **The URL of a roadbeat MCP Gateway**, for example `https://mcp.example.com/mcp`. Your roadbeat operator (or your own [self-hosted gateway](/self-hosting/overview)) gives you this URL. With a personal account, look for the **Connect an AI assistant** card under **Connected AI apps** in the roadbeat Web Client — it shows the URL and the setup steps for your assistant.
+- **A roadbeat account** — a personal account in the roadbeat Web Client for your goals, follows and bookmarks, or a Studio account for your organization's content. Public search works with either.
+- **An MCP-capable assistant**: Claude, Claude Code, ChatGPT, Cursor, or the MCP Inspector.
+
+<Callout kind="alert">
+  Hosted assistants such as Claude on the web and ChatGPT connect **from their vendor's cloud**. They can only reach a gateway that is available on the public internet over HTTPS. For a gateway on your laptop or LAN, use Claude Code, Cursor, the MCP Inspector or the [Claude Desktop extension](/connect/claude-desktop-extension).
+</Callout>
+
+## Connect and sign in
+
+<Steps>
+  <Step title="Add the gateway to your assistant">
+    Pick your client and add the gateway URL. The default endpoint `/mcp` serves the compact **core** tool set that works well in every client.
+
+    <Tabs>
+      <Tab title="Claude Code" icon="terminal">
+        ```bash
+        claude mcp add --transport http roadbeat https://mcp.example.com/mcp
+        ```
+        Then type `/mcp` in a Claude Code session and choose **roadbeat › Authenticate**.
+      </Tab>
+      <Tab title="Claude" icon="message-circle">
+        In Claude, open **Settings › Connectors › Add custom connector**, enter a name (`roadbeat`) and the URL `https://mcp.example.com/mcp`, then select **Connect**.
+      </Tab>
+      <Tab title="Cursor" icon="mouse-pointer-2">
+        Add the server to `~/.cursor/mcp.json` (or `.cursor/mcp.json` in your project):
+        ```json
+        {
+          "mcpServers": {
+            "roadbeat": { "url": "https://mcp.example.com/mcp" }
+          }
+        }
+        ```
+      </Tab>
+      <Tab title="ChatGPT" icon="message-square">
+        Enable developer mode in ChatGPT's connector settings and create a connector with the URL `https://mcp.example.com/mcp` and OAuth authentication. See [ChatGPT](/connect/chatgpt).
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Sign in with your roadbeat account">
+    Your assistant opens a browser window. Sign in to the roadbeat Web Client (personal account) or roadbeat Studio (organization account), review what the app asks for, and select **Allow**.
+
+    The consent screen shows the app's name and web address. If it says **Unverified app**, only continue if you know where the app comes from.
+  </Step>
+
+  <Step title="Check the connection">
+    Ask your assistant:
+
+    ```text
+    Which roadbeat account am I connected as?
+    ```
+
+    It calls `gateway_whoami` and shows your account, the app it is connected through and the permissions (scopes) you granted.
+  </Step>
+
+  <Step title="Search roadbeat">
+    ```text
+    Find family-friendly events in Munich this weekend on roadbeat and cite the sources.
+    ```
+
+    The assistant uses `discovery_search` with a city and date filter and links every result to its source.
+  </Step>
+
+  <Step title="Work with your goals">
+    With a personal account:
+
+    ```text
+    What's new on roadbeat for my goals this week?
+    ```
+
+    The first time an app reads your goals, the gateway asks for your **consent**. Depending on the client this is a dialog or a link to an approval page — approve it, and the assistant continues. See [Consent & Confirmations](/accounts/consent).
+  </Step>
+</Steps>
+
+## What to try next
+
+<Columns cols={2}>
+  <Card title="Set up your first goals" icon="target" href="/help-center/guides/weekly-review">
+    Let the assistant help you pick goal templates and run a weekly Compass review.
+  </Card>
+  <Card title="Draft Studio content" icon="pen-tool" href="/help-center/guides/studio-drafts">
+    Create schema-valid drafts for your organization and publish after confirming.
+  </Card>
+  <Card title="Choose a catalog view" icon="layout-grid" href="/tools/overview">
+    Use `/mcp/all` or `/mcp/studio` when your client handles large tool sets.
+  </Card>
+  <Card title="Something went wrong?" icon="alert-triangle" href="/help-center/troubleshooting/connection">
+    Sign-in loops, missing tools, consent links and other common problems.
+  </Card>
+</Columns>

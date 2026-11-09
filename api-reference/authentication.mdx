@@ -1,0 +1,88 @@
+---
+title: Authentication
+description: How to obtain a gateway access token with the mcp:admin scope for the Admin and Integration Hub API, and how tokens are validated.
+---
+
+The Admin and Integration Hub endpoints accept the same kind of token as the MCP endpoints — an OAuth 2.1 access token issued by one of the gateway's trusted authorization servers — but require the **`mcp:admin`** scope.
+
+## Requirements for the token
+
+| Check | Requirement |
+|-------|-------------|
+| Issuer | Listed in the gateway's `AUTH_ISSUERS` |
+| Type | RFC 9068 access token: JWT header `typ: at+jwt` |
+| Signature | Asymmetric (RS256/384, PS256/384, ES256/384, EdDSA), verified against the issuer's JWKS |
+| Audience | The gateway's root resource, `https://<gateway host>/mcp` |
+| Claims | `sub` and `exp` present, not expired (30 s tolerance by default) |
+| Scope | `mcp:admin` in the `scope` claim |
+
+## Who can get `mcp:admin`
+
+Gateway administration is platform-wide — an admin sees the audit entries and consents of every user. The roadbeat Studio authorization server therefore grants `mcp:admin` only to **platform super admins**, never to organization admins. The Web Client authorization server does not issue it.
+
+## Obtain a token
+
+Admin tokens come from a normal OAuth authorization-code flow with PKCE at the Studio authorization server. The easiest way to use the API interactively is the [admin UI](/self-hosting/admin-ui) at `/admin`, which runs this flow for you. For scripts, run the flow yourself as below. Machine tokens via the OAuth Client Credentials extension are planned.
+
+<Steps>
+  <Step title="Pre-register an admin client">
+    Under **Platform admin › OAuth clients** in Studio, register a client, for example `gateway-admin-cli` with application type `native` and the loopback redirect URI of your tool. See [Pre-register clients](/self-hosting/authorization-servers#pre-register-clients).
+  </Step>
+  <Step title="Authorize in the browser">
+    Open the authorization URL (with a fresh PKCE verifier and `state`), sign in as a platform super admin and allow the administration permission on the consent screen:
+
+    ```text
+    https://studio.example.com/oauth/authorize
+      ?response_type=code
+      &client_id=gateway-admin-cli
+      &redirect_uri=http://127.0.0.1:8765/callback
+      &scope=mcp:admin
+      &resource=https://mcp.example.com/mcp
+      &code_challenge=<S256 challenge>
+      &code_challenge_method=S256
+      &state=<random>
+    ```
+  </Step>
+  <Step title="Exchange the code">
+    ```bash
+    curl -X POST https://studio.example.com/oauth/token \
+      -d grant_type=authorization_code \
+      -d client_id=gateway-admin-cli \
+      -d code=<code> \
+      -d code_verifier=<verifier> \
+      -d redirect_uri=http://127.0.0.1:8765/callback \
+      -d resource=https://mcp.example.com/mcp
+    ```
+    The response contains a 15-minute `access_token` and a rotating `refresh_token`.
+  </Step>
+  <Step title="Call the API">
+    ```bash
+    curl https://mcp.example.com/api/v1/admin/clients -H "Authorization: Bearer <access_token>"
+    ```
+  </Step>
+</Steps>
+
+<Callout kind="tip">
+  Any OAuth library or tool that supports authorization code + PKCE and resource indicators (RFC 8707) can run this flow for you.
+</Callout>
+
+## Local development
+
+Against a local gateway, mint a development token with the admin scope:
+
+```bash
+pnpm dev:token -- --sub admin --client admin-cli --scope "mcp:admin"
+```
+
+Development tokens use the issuer `roadbeat-dev` and are refused in production. See [Authorization Servers](/self-hosting/authorization-servers#development-tokens).
+
+## Error responses
+
+| Situation | Response |
+|-----------|----------|
+| No `Authorization: Bearer` header | `401` — *Bearer token required* |
+| Expired token | `401` — *Access token expired* |
+| Token for another resource | `401` — *Access token was not issued for this resource (audience mismatch)* |
+| Not an access token | `401` — *Not an access token (typ must be at+jwt)* |
+| Unknown issuer | `401` — *Token issuer is not trusted by this gateway* |
+| Missing scope | `403` — *mcp:admin scope required* |

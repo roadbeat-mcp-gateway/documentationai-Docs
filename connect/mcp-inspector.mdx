@@ -1,0 +1,65 @@
+---
+title: MCP Inspector & Custom Agents
+description: Explore the roadbeat gateway with the MCP Inspector and connect your own agents with any MCP client library over OAuth.
+---
+
+## MCP Inspector
+
+The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) is the official browser UI for trying MCP servers. It is the quickest way to see exactly which tools, resources and prompts the gateway offers your account.
+
+<Steps>
+  <Step title="Start the Inspector">
+    ```bash
+    npx @modelcontextprotocol/inspector
+    ```
+    It opens in your browser.
+  </Step>
+  <Step title="Connect">
+    - **Transport type:** Streamable HTTP
+    - **URL:** `https://mcp.example.com/mcp` (or `/mcp/all`, `/mcp/discovery`, …)
+
+    Use the Inspector's OAuth settings to run the sign-in flow: it discovers the roadbeat authorization server from the gateway, opens the sign-in in your browser and returns with a token.
+  </Step>
+  <Step title="Explore">
+    Open **Tools › List tools**, pick `gateway_whoami` and run it. Then try `discovery_search` with `{"query": "climate", "countryCodes": ["DE"]}` or read the resource `discovery://content-types`.
+  </Step>
+</Steps>
+
+<Callout kind="tip">
+  For a local gateway without an authorization server, mint a development token (`pnpm dev:token`, see [Authorization Servers](/self-hosting/authorization-servers#development-tokens)) and add it in the Inspector as header `Authorization: Bearer <token>`.
+</Callout>
+
+## Custom agents
+
+Any MCP client that implements **Streamable HTTP** and the **MCP authorization** specification can use the gateway — for example the official TypeScript or Python SDKs.
+
+What your client needs to handle:
+
+| Topic | What the gateway expects |
+|-------|--------------------------|
+| Protocol | MCP `2026-07-28` (stateless). `2025-11-25` clients are served on the same endpoints, without sessions. |
+| Transport | `POST` to `/mcp`, `/mcp/all` or `/mcp/{server}`. `GET` and `DELETE` return `405`. |
+| Headers | `MCP-Protocol-Version`, `Mcp-Method`, and `Mcp-Name` for `tools/call`, `resources/read`, `prompts/get`; `Accept: application/json, text/event-stream` |
+| Authorization | OAuth 2.1 with PKCE. Discover the authorization server from the `401` response (`WWW-Authenticate: Bearer resource_metadata="…"`), request the token with `resource` = the endpoint URL. |
+| Scopes | Start with `discovery:read schema:read cd:read:public`; ask for more when a call answers `403 insufficient_scope`. |
+| Confirmations | Support **elicitation** (form and URL mode) via `input_required` results, or relay the approval link from the tool's text to a human. |
+| Retries | Send an `idempotencyKey` (UUID) with write tools and reuse it when you retry the same action. |
+
+Inspect the discovery documents with `curl`:
+
+```bash
+# 1. Unauthenticated call → 401 with a pointer to the metadata
+curl -si -X POST https://mcp.example.com/mcp -H 'content-type: application/json' -d '{}' | grep -i www-authenticate
+
+# 2. Protected Resource Metadata (RFC 9728) → authorization_servers
+curl -s https://mcp.example.com/.well-known/oauth-protected-resource/mcp
+
+# 3. Authorization server metadata (RFC 8414), e.g. the Web Client
+curl -s https://app.example.com/.well-known/oauth-authorization-server
+```
+
+The full protocol surface is described in [MCP Endpoints](/api-reference/mcp-endpoints).
+
+<Callout kind="info">
+  **Automation without a human user** (service accounts via the OAuth Client Credentials extension) is planned but not available in release 0.1.0. Today every HTTP caller acts on behalf of a signed-in roadbeat user.
+</Callout>

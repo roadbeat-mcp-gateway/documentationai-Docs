@@ -1,0 +1,152 @@
+---
+title: Run with Docker
+description: Build or pull the roadbeat MCP Gateway image, run the database migration, start it with Docker Compose and publish it behind a reverse proxy.
+---
+
+The gateway ships as one container image: Node.js 22 LTS on Alpine, running as an unprivileged user, listening on port **3700**, with a built-in health check. The image also contains the built [admin UI](/self-hosting/admin-ui), served at `/admin`.
+
+## Get the image
+
+<Tabs>
+  <Tab title="Build from source" icon="hammer">
+    From the root of the `mcp-gateway` repository:
+
+    ```bash
+    docker build -f docker/api.Dockerfile -t roadbeat/mcp-gateway-api:0.1.0 .
+    ```
+  </Tab>
+  <Tab title="From your registry" icon="package">
+    The project's CI builds the image on every push to `main` and pushes it to the roadbeat container registry as `roadbeat/mcp-gateway-api:<commit>` and `:latest`:
+
+    ```bash
+    docker pull <registry>/roadbeat/mcp-gateway-api:latest
+    ```
+  </Tab>
+</Tabs>
+
+## Run the database migration
+
+The image contains the Prisma migrations. Run them once before the first start and before every upgrade — as a separate step, not on container start:
+
+```bash
+docker run --rm \
+  -e DATABASE_URL="postgresql://gateway:<password>@db:5432/roadbeat_mcp_gateway" \
+  roadbeat/mcp-gateway-api:0.1.0 npx prisma migrate deploy
+```
+
+## Docker Compose example
+
+```yaml
+services:
+  mcp-gateway:
+    image: roadbeat/mcp-gateway-api:0.1.0
+    restart: unless-stopped
+    env_file: mcp-gateway.env          # see the Configuration Reference
+    environment:
+      NODE_ENV: production
+      PORT: 3700
+      PUBLIC_BASE_URL: https://mcp.example.com
+      GATEWAY_STORE: prisma
+      DATABASE_URL: postgresql://gateway:${GATEWAY_DB_PASSWORD}@db:5432/roadbeat_mcp_gateway
+      REDIS_URL: redis://redis:6379   # optional
+    depends_on:
+      - db
+      - redis
+    expose:
+      - "3700"
+
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gateway
+      POSTGRES_PASSWORD: ${GATEWAY_DB_PASSWORD}
+      POSTGRES_DB: roadbeat_mcp_gateway
+    volumes:
+      - gateway-db:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+volumes:
+  gateway-db:
+```
+
+The gateway refuses to start with an unsafe production configuration — for example without `REQUEST_STATE_SECRET`, with the in-memory store, or with development key files. The error message names the variable to fix.
+
+## Reverse proxy
+
+Terminate TLS in front of the gateway and pass these paths to it:
+
+| Path | Purpose |
+|------|---------|
+| `/mcp`, `/mcp/*` | MCP endpoints |
+| `/.well-known/oauth-protected-resource`, `/.well-known/oauth-protected-resource/*` | Protected Resource Metadata (RFC 9728) |
+| `/approve/*` | Consent and confirmation approval page |
+| `/api/v1/health*` | Health probes (may stay internal) |
+| `/admin`, `/admin/*`, `/api/v1/admin-ui/config` | Admin UI and its sign-in configuration (restrict to your admin network if you can) |
+| `/api/v1/admin/*`, `/api/v1/catalog`, `/api/v1/consents` | Admin and Integration Hub API (restrict to your admin network if you can) |
+| `/api/docs` | Swagger UI (optional; restrict or block) |
+| `/metrics` | Prometheus (internal only, or protect with `METRICS_TOKEN`) |
+
+<Tabs>
+  <Tab title="Own host (Caddy)" icon="globe">
+    ```text
+    mcp.example.com {
+        reverse_proxy mcp-gateway:3700
+    }
+    ```
+  </Tab>
+  <Tab title="Shared with Studio (Caddy)" icon="layers">
+    When the gateway lives under the Studio domain (`https://studio.example.com/mcp`), add these handlers **before** Studio's catch-all, next to the routes of Studio's authorization server. The admin UI and Admin API (`/admin`, `/api/v1/admin…`) would collide with Studio's own `/api/*` routes on a shared host — give the gateway its own host name if you want to use them.
+
+    ```text
+    handle /mcp* {
+        reverse_proxy mcp-gateway:3700
+    }
+    handle /.well-known/oauth-protected-resource* {
+        reverse_proxy mcp-gateway:3700
+    }
+    handle /approve/* {
+        reverse_proxy mcp-gateway:3700
+    }
+    # Studio's authorization server
+    handle /oauth/* {
+        reverse_proxy api:3000
+    }
+    handle /.well-known/oauth-authorization-server* {
+        reverse_proxy api:3000
+    }
+    handle /.well-known/openid-configuration {
+        reverse_proxy api:3000
+    }
+    ```
+  </Tab>
+  <Tab title="nginx" icon="server">
+    ```text
+    location ~ ^/(mcp|approve)(/|$) {
+        proxy_pass http://mcp-gateway:3700;
+        proxy_http_version 1.1;
+        proxy_buffering off;          # responses may stream (text/event-stream)
+        proxy_read_timeout 300s;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /.well-known/oauth-protected-resource {
+        proxy_pass http://mcp-gateway:3700;
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Callout kind="alert">
+  `PUBLIC_BASE_URL` must be exactly the public origin clients use (scheme and host, no path). Tokens are bound to `${PUBLIC_BASE_URL}/mcp`; a mismatch makes every sign-in fail with an audience error. The gateway trusts one proxy hop for client IP addresses.
+</Callout>
+
+## Upgrades
+
+1. Pull or build the new image.
+2. Run `npx prisma migrate deploy` with the new image.
+3. Restart the gateway. It is stateless between requests, so instances can be replaced one by one; approval links stay valid as long as all instances share the same `REQUEST_STATE_SECRET`.

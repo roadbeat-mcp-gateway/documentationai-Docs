@@ -1,0 +1,35 @@
+---
+title: '"Why am I seeing this?" Card'
+description: The interactive MCP Apps card that explains why a teaser matches your search or your goal — and the text fallback for every other client.
+---
+
+Transparency is a core roadbeat promise: you can always ask **why** something was shown to you. Two tools answer that question, and in clients that support **MCP Apps** (`io.modelcontextprotocol/ui`) the answer appears as an interactive card right in the conversation.
+
+| Tool | Explains |
+|------|----------|
+| [`discovery_explain_result`](/tools/discovery#discovery_explain_result) | Why a teaser matches a **search**: text match with score and highlights, and every filter compared with the teaser's actual value |
+| [`compass_explain_match`](/tools/compass#compass_explain_match) | Why a teaser matches one of **your goals**: each content query of the goal, matched or not, with the field-by-field comparison |
+
+## What the card shows
+
+- A headline verdict: **Matches your search**, **Partly matches your search**, **Matches your goal** or **Does not match your goal**.
+- **Text** — for searches: whether the query matched, the relevance score and highlighted passages.
+- **Filters** — for searches: each filter you used, the expected and actual value, and a ✓ or ✗.
+- **Goal queries** — for goals: *This query matched* / *This query did not match*, with the content type, relevance and compared fields.
+- **Publisher** — the publisher's name, whether it is verified, and its trust level.
+
+The card follows your client's light or dark theme.
+
+## Built to be safe
+
+- The card is one self-contained HTML file served as the resource `ui://roadbeat/why-card.html` (`text/html;profile=mcp-app`). It loads nothing from other websites, so it works under the strictest content security policy a client applies.
+- It renders publisher text strictly as text — titles or highlights can never inject markup or scripts.
+- It only displays the tool's result; it does not call back into roadbeat.
+
+## Without MCP Apps
+
+Clients without the extension simply get the same explanation as structured data and text, and the assistant explains it in words. Nothing is lost except the visual layout.
+
+<Callout kind="info">
+  The card is a **beta** in release 0.1.0. It was tested with a simulated MCP Apps host; verification in Claude and ChatGPT is still pending. More cards (a daily Compass review, a publish confirmation) are planned after 1.0.
+</Callout>

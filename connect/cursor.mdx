@@ -1,0 +1,63 @@
+---
+title: Cursor
+description: Configure the roadbeat MCP Gateway in Cursor through mcp.json — as a remote server with OAuth sign-in or as a local stdio sidecar.
+---
+
+Cursor reads MCP servers from `mcp.json`: `~/.cursor/mcp.json` for all projects, or `.cursor/mcp.json` inside a project. Cursor does not use tool search, so the compact core endpoint `/mcp` is the best default.
+
+<Callout kind="tip">
+  **Personal roadbeat account?** Open **Connected AI apps** in the roadbeat Web Client: if your provider has set up a gateway, the **Connect an AI assistant** card shows the connector URL to copy and these steps, including a ready-to-copy `mcp.json`.
+</Callout>
+
+## Remote gateway (recommended)
+
+<Steps>
+  <Step title="Add the server">
+    ```json
+    {
+      "mcpServers": {
+        "roadbeat": {
+          "url": "https://mcp.example.com/mcp"
+        }
+      }
+    }
+    ```
+  </Step>
+  <Step title="Sign in">
+    Open **Cursor Settings › MCP** (called **Tools & Integrations** in some versions). The roadbeat entry shows a **Needs login** / **Connect** button — select it, sign in with your roadbeat account in the browser and select **Allow**.
+  </Step>
+  <Step title="Check">
+    In the chat, ask *"Which roadbeat account am I connected as?"*. The roadbeat tools now show as enabled in the MCP settings.
+  </Step>
+</Steps>
+
+<Callout kind="tip">
+  Writing a Studio integration? Add a second entry for `https://mcp.example.com/mcp/schema` to give Cursor the content-type schemas and payload validation, or `/mcp/studio` to read and draft Studio content.
+</Callout>
+
+## Local sidecar
+
+If you prefer to run the gateway on your machine, point Cursor at the sidecar's `stdio.js`. Sign in once with `stdio.js login` (see [Claude Desktop Extension](/connect/claude-desktop-extension#use-the-sidecar-in-other-clients)), then:
+
+```json
+{
+  "mcpServers": {
+    "roadbeat-local": {
+      "command": "node",
+      "args": ["/path/to/roadbeat-mcp-gateway/stdio.js", "--profile=core"],
+      "env": {
+        "DISCOVERY_NODE_URLS": "https://discover.roadbeat.net",
+        "SCHEMA_REGISTRY_URL": "https://schemas.roadbeat.net",
+        "CONTEXT_DIRECTORY_URL": "https://context.roadbeat.net",
+        "WEB_CLIENT_PUBLIC_URL": "https://app.roadbeat.net"
+      }
+    }
+  }
+}
+```
+
+The sidecar only writes protocol messages to stdout; its logs go to stderr, which Cursor shows in the MCP output panel.
+
+<Callout kind="info">
+  Deleting goals and bookmarks needs a confirmation dialog. If your Cursor version cannot show MCP confirmation dialogs (elicitation), the sidecar refuses these tools instead of deleting without asking.
+</Callout>

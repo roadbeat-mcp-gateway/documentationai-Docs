@@ -1,0 +1,100 @@
+---
+title: Claude Code
+description: Connect Claude Code to the roadbeat MCP Gateway over HTTP with OAuth, share the setup with your team through .mcp.json, or run the local sidecar.
+---
+
+Claude Code talks to the gateway over Streamable HTTP and signs you in with OAuth. Because Claude Code loads tools on demand (tool search), it handles the full catalog well — use `/mcp/all` to get every tool your account may use.
+
+<Callout kind="tip">
+  **Personal roadbeat account?** Open **Connected AI apps** in the roadbeat Web Client: if your provider has set up a gateway, the **Connect an AI assistant** card shows the connector URL to copy and these steps, including the ready-to-copy `claude mcp add` command.
+</Callout>
+
+## Add the gateway
+
+<Steps>
+  <Step title="Register the server">
+    <CodeGroup tabs="Full catalog,Core only,Studio only">
+    ```bash
+    claude mcp add --transport http roadbeat https://mcp.example.com/mcp/all
+    ```
+    ```bash
+    claude mcp add --transport http roadbeat https://mcp.example.com/mcp
+    ```
+    ```bash
+    claude mcp add --transport http roadbeat-studio https://mcp.example.com/mcp/studio
+    ```
+    </CodeGroup>
+
+    Add `--scope user` to make the server available in all your projects, or `--scope project` to write it to the project's `.mcp.json`.
+  </Step>
+  <Step title="Sign in">
+    Start Claude Code, type `/mcp`, select **roadbeat** and choose **Authenticate**. Your browser opens the roadbeat sign-in; after **Allow**, Claude Code stores the tokens and refreshes them automatically.
+  </Step>
+  <Step title="Check">
+    ```text
+    > Which roadbeat account am I connected as?
+    ```
+    Claude Code calls `gateway_whoami` and shows your account, client and scopes.
+  </Step>
+</Steps>
+
+## Share the setup with your team
+
+Commit a `.mcp.json` to your repository. Every team member signs in with their own roadbeat account — no secrets are stored in the file.
+
+```json
+{
+  "mcpServers": {
+    "roadbeat": {
+      "type": "http",
+      "url": "https://mcp.example.com/mcp/all"
+    }
+  }
+}
+```
+
+## Tips
+
+- **Tool names** appear as `mcp__roadbeat__discovery_search` in Claude Code. All roadbeat tool names stay well below Claude Code's 128-character limit.
+- **Large results**: the gateway pages and caps its results so a single response stays well below Claude Code's output limit. Ask for the next page (`page: 2`) instead of raising limits.
+- **Typed Studio tools** (`studio_create_<type>`) only exist on `/mcp/studio`. If you author content often, add that endpoint as a second server.
+- **Step-up**: when a tool needs a permission you have not granted yet, Claude Code receives `403 insufficient_scope` and asks you to authenticate again. Run `/mcp` › **roadbeat** › **Authenticate** and approve the additional permission.
+
+## Run the gateway locally (sidecar)
+
+Without a hosted gateway, Claude Code can start the gateway itself as a local **stdio** process. It then uses your own roadbeat session instead of OAuth:
+
+```bash
+# once: store your Context Directory session (password prompt, file mode 0600)
+node /path/to/roadbeat-mcp-gateway/stdio.js login --username=<your roadbeat username>
+
+# register the sidecar
+claude mcp add roadbeat-local -- node /path/to/roadbeat-mcp-gateway/stdio.js --profile=core
+```
+
+`stdio.js` comes from a gateway build (`apps/api/dist/stdio.js`) or from the server folder inside the [Claude Desktop extension](/connect/claude-desktop-extension#use-the-sidecar-in-other-clients). Profiles: `core`, `all`, `discovery`, `schema`, `cd`, `goals`.
+
+The sidecar's service URLs default to a local development stack. To use the public roadbeat services, set `DISCOVERY_NODE_URLS`, `SCHEMA_REGISTRY_URL`, `CONTEXT_DIRECTORY_URL` and `WEB_CLIENT_PUBLIC_URL` (with `--env`), and pass `--cd-url=<Context Directory URL>` to `login` — see [the sidecar settings](/connect/claude-desktop-extension#use-the-sidecar-in-other-clients).
+
+<Callout kind="info">
+  The sidecar is **read-only by default** for personal data. To let the assistant add goals or bookmarks, pass write scopes in `STDIO_SCOPES` (the `--env` option goes before the `--`):
+
+  ```bash
+  claude mcp add roadbeat-local \
+    --env STDIO_SCOPES="discovery:read schema:read cd:read:public cd:profile:read cd:goals:write cd:follows:write cd:bookmarks:write" \
+    -- node /path/to/roadbeat-mcp-gateway/stdio.js --profile=core
+  ```
+
+  See [Configuration Reference](/self-hosting/configuration#stdio-sidecar).
+</Callout>
+
+## Local development with a test token
+
+Developers running a gateway on `localhost` without an authorization server can mint a development token and pass it as a header:
+
+```bash
+pnpm dev:token -- --sub alice --client claude-code --scope "discovery:read schema:read cd:read:public"
+claude mcp add --transport http roadbeat-dev http://localhost:3700/mcp --header "Authorization: Bearer <token>"
+```
+
+Development tokens are rejected in production. See [Authorization Servers](/self-hosting/authorization-servers#development-tokens).

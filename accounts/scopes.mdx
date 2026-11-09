@@ -1,0 +1,61 @@
+---
+title: Scopes
+description: Every OAuth scope of the roadbeat MCP Gateway in plain language — who can grant it, which tools need it, and how step-up works.
+---
+
+A **scope** is a permission you grant an AI app when you sign in. The gateway checks the scopes of every request; scopes are combined (AND) with your role and with what each tool requires.
+
+## Public reads
+
+Granted by both the Web Client and Studio sign-in. An app that does not ask for anything specific gets the three **baseline** scopes marked ★.
+
+| Scope | Plain language | Needed by |
+|-------|----------------|-----------|
+| `discovery:read` ★ | Search roadbeat content (includes `discovery:read:public`) | `search`, `fetch`, all `discovery_*` tools and resources |
+| `discovery:read:public` | Search public roadbeat content | as above |
+| `schema:read` ★ | Read content types and validate payloads | `schema_*` tools, `schema://` resources |
+| `cd:read:public` ★ | Read the public goal catalog and geo data | `cd_search_goal_templates`, `cd_get_goal_template`, `discovery_search_by_goal`, `cd://goals/*`, `cd://geo/*` |
+
+## Personal data — Web Client sign-in
+
+| Scope | Plain language | Needed by |
+|-------|----------------|-----------|
+| `cd:profile:read` | Read your profile (display name, locale) | `cd://me/profile` |
+| `cd:goals:read` | Read your goals | `cd_list_goals`, `compass_*`, `cd://me/goals` |
+| `cd:goals:write` | Change your goals (includes read) | `cd_add_goal`, `cd_update_goal`, `cd_record_goal_progress`, `cd_reorder_goals`, `cd_remove_goal` |
+| `cd:follows:read` | Read the publishers you follow | `cd_list_follows`, `cd://me/follows` |
+| `cd:follows:write` | Follow and unfollow publishers (includes read) | `cd_follow_publisher`, `cd_unfollow_publisher` |
+| `cd:bookmarks:read` | Read your bookmarks and collections | `cd_list_bookmarks`, `cd://me/bookmarks` |
+| `cd:bookmarks:write` | Change bookmarks and collections (includes read) | `cd_add_bookmark`, `cd_remove_bookmark`, `cd_create_collection`, `cd_add_to_collection` |
+| `cd:export` | Export your personal data | `cd_export_data`, `cd://me/export` |
+| `cd:profile:write` | Change your profile | reserved — no tool uses it yet |
+
+## Organization content — Studio sign-in
+
+| Scope | Plain language | Studio role | Needed by |
+|-------|----------------|-------------|-----------|
+| `studio:read` | Read your organization's content | Viewer and up | `studio_list_content`, `studio_get_content`, `studio_list_content_types`, `studio_get_content_type`, `studio_get_publish_status`, `studio_get_translation_status`, `studio_list_locales`, `studio_list_locale_variants`, `studio_find_assets`, `studio://` resources |
+| `studio:write` | Create and edit drafts (includes read) | Editor and up | `studio_create_draft`, `studio_update_draft`, `studio_validate_content`, `studio_create_<type>`, `studio_translate_content`, `studio_create_locale_variant`, `studio_upload_asset`, `studio_update_asset` |
+| `studio:publish` | Publish and unpublish (includes write) | Editor and up | `studio_publish_content`, `studio_unpublish_content`, `studio_distribute_to_discovery` |
+| `studio:admin` | Administer Studio settings (includes publish) | Admin | reserved — no tool uses it yet |
+| `mcp:admin` | Administer the gateway: audit log, consents, catalog | Platform super admin | [Admin UI](/self-hosting/admin-ui) and [Admin API](/api-reference/overview) |
+
+## Reserved for upcoming servers
+
+`discovery:admin`, `schema:admin`, `pod:owner`, `pod:admin`, `augmentor:read` and `augmentor:run` are part of the scope vocabulary for the Content Pod and Augmentor servers and administrative tools. No tool in release 0.1.0 uses them.
+
+## How scopes combine
+
+- **Broader covers narrower.** A write scope covers the read scope of the same area (`cd:goals:write` → `cd:goals:read`), `studio:admin` → `studio:publish` → `studio:write` → `studio:read`, and `discovery:read` covers `discovery:read:public`. A scope also covers every longer scope it is a prefix of (`cd:goals` would cover `cd:goals:read`).
+- **Your role caps your scopes.** Studio never grants a scope your role does not allow, and re-checks this on every token refresh.
+- **Consent comes on top.** A scope says what an app *may* do. For personal data, changes and exports the gateway additionally asks for your [consent](/accounts/consent).
+
+## Step-up: asking for more later
+
+Apps start with few permissions and ask for more when they need them:
+
+1. The app calls a tool whose scope you have not granted, for example `cd_add_goal` (`cd:goals:write`).
+2. The gateway answers `403` with `WWW-Authenticate: Bearer error="insufficient_scope", scope="…"` listing **all** scopes the call needs, so one round trip is enough.
+3. The app opens the roadbeat sign-in again; you see the consent screen with the additional permission and decide.
+
+If an app cannot step up on its own, reconnect it and grant the permission during sign-in. Clients that are not served over HTTP (the local sidecar) get the missing scopes as a tool error instead.

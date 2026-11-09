@@ -1,0 +1,148 @@
+---
+title: Tool Errors
+description: What the roadbeat MCP Gateway's tool messages mean — consent links, confirmations, rate limits, idempotency conflicts, schema errors and unavailable services.
+---
+
+Tool errors come back as normal tool results with a sentence your assistant can act on. Here is what they mean and what to do.
+
+## Consent and confirmation
+
+<Expandable title='"Consent required. Ask the user to open this link and approve: …"' default-open="true">
+**Meaning:** The app wants to use a kind of access for the first time (reading your goals, changing something, exporting data) and your app cannot show the request itself.
+
+**What to do:** Open the link, check what is requested, choose how long it should last and select **Allow**. Then ask the assistant to try again — with the same request. The link expires after 10 minutes. See [Consent & Confirmations](/accounts/consent).
+</Expandable>
+
+<Expandable title='"Confirmation required: … Ask the user to open … and approve, then call this tool again with exactly the same arguments."' default-open="false">
+**Meaning:** A delete or publish needs your confirmation and the app cannot show a dialog.
+
+**What to do:** Open the link, check the summary and select **Confirm**. The assistant must then repeat the call with **exactly** the same arguments — if anything changes, a new confirmation is needed.
+</Expandable>
+
+<Expandable title='"The user declined the action. Nothing was changed." / "The user declined to grant consent for this action."' default-open="false">
+**Meaning:** You (or the dialog) said no. Nothing happened.
+
+**What to do:** Nothing — or ask the assistant to try again if you changed your mind.
+</Expandable>
+
+<Expandable title="The approval page says “Invalid link”, “Already decided” or “Not found”" default-open="false">
+**Meaning:** The link was altered or copied incompletely, was already used, or has expired.
+
+**What to do:** Ask the assistant to call the tool again; it gets a fresh link.
+</Expandable>
+
+<Expandable title='"This MCP client cannot show confirmation dialogs, so destructive tools are disabled for the local sidecar."' default-open="false">
+**Meaning:** In the local sidecar, deleting needs a confirmation dialog, and your client does not support MCP dialogs (elicitation).
+
+**What to do:** Delete the goal or bookmark in the roadbeat app, use a client with dialog support, or connect through an HTTP gateway (which offers the approval page instead).
+</Expandable>
+
+<Expandable title='"This action needs a signed-in user. Connect the MCP client with OAuth to use it."' default-open="false">
+**Meaning:** You are connected anonymously, and the tool needs an account.
+
+**What to do:** Remove anonymous access from your client configuration and sign in.
+</Expandable>
+
+## Limits and retries
+
+<Expandable title='"Rate limit exceeded. Retry in N s."' default-open="true">
+**Meaning:** Your account and app reached the per-minute limit — overall or for that tool (e.g. 2 exports per minute, 10 publishes per minute).
+
+**What to do:** Wait the given number of seconds. If an assistant hits this regularly, ask it to use fewer, more precise searches. See [Rate Limits & Retries](/accounts/limits).
+</Expandable>
+
+<Expandable title='"idempotencyKey was already used with different arguments. Use a new key for a new action."' default-open="false">
+**Meaning:** The app reused a retry key for a different action.
+
+**What to do:** Nothing is broken — the assistant should use a fresh UUID for every new action and the same one only when repeating the identical call.
+</Expandable>
+
+<Expandable title='"Missing OAuth scope(s): …"' default-open="false">
+**Meaning:** The connection lacks a permission. Over HTTP this normally appears as a sign-in prompt instead; in the local sidecar it means `STDIO_SCOPES` does not include it.
+
+**What to do:** Reconnect and grant the permission, or add the scope to `STDIO_SCOPES` for the sidecar.
+</Expandable>
+
+## Studio translation
+
+<Expandable title='"roadbeat Studio rejected the request: Machine translation requires recorded consent …"' default-open="false">
+**Meaning:** Your organization has a translation provider that sends text to an external service, but no organization admin has accepted Studio's data-processing consent for it yet.
+
+**What to do:** Ask an admin of your Studio organization to review and accept the consent in Studio's machine-translation settings. AI apps cannot accept it — the provider settings and the consent stay closed to them.
+</Expandable>
+
+<Expandable title='"No machine-translation provider is configured for this organization …" or "… Translation provider … is not configured / requires the pro-ai plugin"' default-open="false">
+**Meaning:** No working translation provider is set up for your organization. If **no** provider is configured at all, the gateway refuses before anything is translated; nothing was changed. A selected provider without its server URL or key, or Pro AI without the plugin, is refused by Studio with the second message.
+
+**What to do:** Ask your Studio admin to configure a provider (for example DeepL, Mistral or LibreTranslate) in Studio. Running `studio_translate_content` with `dryRun` first is still a good habit.
+</Expandable>
+
+<Expandable title='Every field is listed under "failed" (for example "pro-ai: no provider satisfies residency …")' default-open="false">
+**Meaning:** The provider refused the translation — with Pro AI, typically because no configured model satisfies the organization's data-residency policy (e.g. EU only). Nothing was saved.
+
+**What to do:** Ask your Studio admin to check the Pro AI provider and residency settings.
+</Expandable>
+
+<Expandable title='"roadbeat Studio rejected the request: This content was changed by someone else since you loaded it …"' default-open="false">
+**Meaning:** `studio_translate_content` saves with the version it started from. Someone saved the item while the translation ran, so nothing was overwritten. The same protection applies to `studio_update_draft` with `expectedVersion`.
+
+**What to do:** Run the translation again — it starts from the newest version. Fields that were filled in the meantime are skipped unless you ask to overwrite them.
+</Expandable>
+
+<Expandable title="Some fields are listed as skipped" default-open="false">
+**Meaning:** Those fields already have a value in the target locale (and `overwrite` was not set), have no source text, or are marked do-not-machine-translate in the content type.
+
+**What to do:** Nothing, usually. Pass `overwrite: true` to replace existing values, or limit the run with `fields`.
+</Expandable>
+
+<Expandable title='"Version N is not retained for this item"' default-open="false">
+**Meaning:** An app read `studio://versions/{contentId}/{version}` for a version Studio no longer keeps — Studio CE retains the latest ten versions of an item.
+
+**What to do:** Read `studio://versions/{contentId}` for the versions that are available.
+</Expandable>
+
+## Studio media library
+
+<Expandable title='"The file must be between 1 byte and 2 MB." / "unsupported file type" / "plain file name, no path"' default-open="false">
+**Meaning:** `studio_upload_asset` accepts base64 files up to 2 MB of the types PNG, JPEG, GIF, WebP, AVIF, PDF, MP3, Ogg, WAV, plain text and CSV, with a plain file name. SVG is refused because it can carry scripts.
+
+**What to do:** Compress or resize the file, convert it to a supported type, and pass only the file name (e.g. `stage.jpg`, not a path). Larger files can be uploaded in Studio directly and then found with `studio_find_assets`.
+</Expandable>
+
+## Content and services
+
+<Expandable title='"Studio rejected the content: …"' default-open="true">
+**Meaning:** The draft did not match the content type's schema. The message lists Studio's validation errors.
+
+**What to do:** Let the assistant fetch the schema with `studio_get_content_type` (or use the typed `studio_create_<type>` tool) and fix the fields. Drafts that were saved but still have `validationErrors` must be fixed before publishing.
+</Expandable>
+
+<Expandable title='"… The change may still have been saved — check with studio_list_content / studio_get_content …"' default-open="false">
+**Meaning:** Studio did not answer in time after a write. The draft or publish may have happened anyway.
+
+**What to do:** Check the item before trying again, or repeat the call with the same `idempotencyKey` so it cannot happen twice.
+</Expandable>
+
+<Expandable title='"No teaser with id …" / "Goal … not found in …"' default-open="false">
+**Meaning:** The teaser is gone (expired or withdrawn) or the goal template id is wrong.
+
+**What to do:** Search again and use ids from fresh results; take goal ids from `cd_search_goal_templates`.
+</Expandable>
+
+<Expandable title='"sort "distance" needs `near` (a point and radius)."' default-open="false">
+**Meaning:** Sorting by distance needs a center point.
+
+**What to do:** Pass `near` with `lat`, `lon` and `radiusKm`, or sort by relevance.
+</Expandable>
+
+<Expandable title="Search results list unavailableNodes" default-open="false">
+**Meaning:** One or more Discovery Nodes did not answer; the results come from the others.
+
+**What to do:** Usually nothing. If it persists, tell your gateway operator — `discovery://nodes` shows the status of each node.
+</Expandable>
+
+<Expandable title='"Internal gateway error. The failure was logged; try again later."' default-open="false">
+**Meaning:** Something unexpected went wrong in the gateway.
+
+**What to do:** Try again later. Your operator finds the details in the gateway log and the audit log (by time, your account and the tool).
+</Expandable>

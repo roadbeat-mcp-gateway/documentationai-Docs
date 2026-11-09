@@ -1,0 +1,66 @@
+---
+title: Privacy & Your Data
+description: What the roadbeat MCP Gateway stores, where your data goes when an AI app uses it, and how you stay in control — privacy by design, European values.
+---
+
+The gateway is the place where roadbeat's privacy promises meet AI. It is built to hand an AI app **only what you allowed**, to **remember as little as possible**, and to make every access **traceable**.
+
+## Hard guarantees
+
+<Columns cols={2}>
+  <Card title="No hidden data flows" icon="shield">
+    Data only goes to the roadbeat services the gateway is configured for and to the AI app you connected — nowhere else.
+  </Card>
+  <Card title="No AI inside" icon="cpu">
+    The gateway never calls an AI model. It cannot "train" on your data or send it to a model vendor on its own.
+  </Card>
+  <Card title="No tracking" icon="eye-off">
+    No analytics, no usage data to roadbeat e.V. or to AI vendors. Operators see only their own logs and metrics.
+  </Card>
+  <Card title="Local audit log" icon="file-text">
+    Every access is logged in the operator's own database — with hashes instead of contents.
+  </Card>
+</Columns>
+
+## Where your data goes when a tool runs
+
+When an AI app calls a tool, the result goes **to that app** — and with hosted assistants, to the vendor's servers. From then on, the vendor's privacy terms apply. That is why the gateway asks for your [consent](/accounts/consent) before an app reads your personal data for the first time, and why the data export has its own consent class (`pii_egress`).
+
+The gateway also minimizes what it hands out:
+
+- Teasers are stripped of signatures, internal indexing metadata, vectors and publisher contact data.
+- Publisher profiles never include contact names or e-mail addresses.
+- Access tokens issued for the gateway carry no e-mail address.
+- Answers are paged and capped, so an app does not receive more than it asked for.
+
+## What the gateway stores
+
+A deployed gateway keeps the following in its PostgreSQL database. The local sidecar keeps the same information in memory only and forgets it when it stops.
+
+| Data | Contents | How long (defaults) |
+|------|----------|---------------------|
+| **Consent ledger** | Your principal id, the app's client id, consent class, lifetime, timestamps | Kept — revoked ones too — as the record of what you allowed, until you are erased |
+| **Approval requests** | The approval text shown to you, tool name, a SHA-256 hash of the arguments, status, timestamps | Links expire after 10 minutes; the record is deleted 30 days after it expired |
+| **Audit log** | Time, principal id, app client id, tool / resource / prompt name, argument hash, result, duration, trace id, protocol version | Deleted after 365 days; pseudonymized when you are erased |
+| **Idempotency results** | The result of a write call made with an `idempotencyKey` (may include the data the call returned) | Replayed for 24 hours, then deleted |
+| **Connected apps mirror** | App client id, the name and version it reports, first and last seen | For display and audit |
+| **Catalog switches** | Which tools, resources or prompts the operator turned off | Until changed |
+
+An hourly retention job enforces these periods; operators can change them (`AUDIT_RETENTION_DAYS`, `CONFIRMATION_RETENTION_DAYS`) — see [Operations](/self-hosting/operations#data-retention).
+
+**Not stored by the gateway:** passwords, OAuth tokens (they live at the roadbeat sign-in service; the gateway only keeps short-lived exchanged tokens in memory), the arguments of your tool calls, your goals, bookmarks or Studio content (apart from idempotency results), and data exports (kept in memory for two minutes so the app can read the linked document).
+
+## Your rights and controls
+
+| You want to … | How |
+|---------------|-----|
+| See which apps can access your account | **Connected AI apps** in the Web Client or in Studio — see [Accounts & Sign-in](/accounts/sign-in#see-your-connected-apps) |
+| Stop an app | **Disconnect** it there (effective immediately), or sign out of the Web Client session it uses |
+| Get a copy of your personal data | Ask your assistant to run `cd_export_data` — see [Export your data](/tools/personal-data#export-your-data) |
+| See what the gateway stores about you (consents, requests, audit log) | Ask your assistant to run [`gateway_export_my_data`](/tools/gateway#gateway_export_my_data) |
+| Withdraw your consents | Ask your assistant to run [`gateway_revoke_my_consents`](/tools/gateway#gateway_revoke_my_consents) — for one app or, with `allApps`, for every app |
+| Have your gateway records erased | Ask your gateway operator. Erasure deletes your consents, requests and stored results and pseudonymizes your audit records — see [Admin UI](/self-hosting/admin-ui#answering-data-protection-requests) |
+
+## European data sovereignty
+
+The gateway is open source (AGPL-3.0) and self-hostable. Run it next to your Studio or Web Client in your own European infrastructure — it needs no service outside your deployment. See [Self-Hosting](/self-hosting/overview).

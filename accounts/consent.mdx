@@ -1,0 +1,90 @@
+---
+title: Consent & Confirmations
+description: How the gateway asks before an AI app reads your personal data, changes something or publishes — consent classes, lifetimes, approval links and confirmations.
+---
+
+Signing in tells roadbeat which **app** may act for you. Consent and confirmation make sure **you** stay in charge of what it actually does — even when the app runs tools without asking you first. Both are enforced by the gateway, not by the app.
+
+## Consent: once per app and kind of access
+
+Each tool belongs to a **consent class**. For the classes marked *yes*, the gateway asks you the first time an app uses them:
+
+| Consent class | Tools (examples) | Consent |
+|---------------|------------------|---------|
+| `read_public` | `search`, `discovery_search`, `schema_lookup_type`, `cd_search_goal_templates` | no |
+| `read_org` | `studio_list_content`, `studio_get_content`, `studio_validate_content`, `studio_get_translation_status`, `studio_list_locales`, `studio_find_assets`, `studio://` resources | no — your Studio role and scopes apply |
+| `read_personal` | `cd_list_goals`, `cd_list_bookmarks`, `compass_review_today`, `cd://me/*` | **yes** |
+| `write_personal` | `cd_add_goal`, `cd_update_goal`, `cd_follow_publisher`, `cd_add_bookmark`, `cd_remove_goal` | **yes** |
+| `write_org` | `studio_create_draft`, `studio_update_draft`, `studio_create_<type>`, `studio_publish_content`, `studio_distribute_to_discovery`, `studio_translate_content`, `studio_create_locale_variant`, `studio_upload_asset`, `studio_update_asset` | **yes** |
+| `pii_egress` | `cd_export_data`, `cd://me/export`, `gateway_export_my_data`, `gateway://me/export` | **yes** |
+| `network_call` | — (reserved for tools that call external services) | **yes** |
+
+A consent is stored for exactly one combination of **you × app × consent class**. Allowing Claude to read your goals does not allow ChatGPT to, and does not allow Claude to change them.
+
+### What you see
+
+<Steps>
+  <Step title="The app calls a tool that needs consent">
+    For example, Claude calls `cd_list_goals` for the first time.
+  </Step>
+  <Step title="The gateway asks you">
+    Depending on what the app supports, you get:
+
+    - **a link inside the app** (URL elicitation): the app shows *"roadbeat needs your consent: Allow Claude to read your personal roadbeat data (goals, follows, bookmarks) (first use: List my goals)."* and opens roadbeat's approval page, or
+    - **a link in the tool answer**: *"Consent required. Ask the user to open this link and approve: … It expires in 10 minutes. Then call this tool again with the same arguments."* — a good assistant shows you the link.
+  </Step>
+  <Step title="You decide on the approval page">
+    The page shows what is requested, the app (OAuth client), which tool triggered it and when the link expires. Choose how long your decision lasts and select **Allow** or **Decline**.
+  </Step>
+  <Step title="Back in the app">
+    Return to the app. It retries the call, which now goes through.
+  </Step>
+</Steps>
+
+### How long a consent lasts
+
+| Option on the approval page | Meaning |
+|-----------------------------|---------|
+| **Only this time** | Valid for one successful call |
+| **For 24 hours** (default) | Valid for a day |
+| **For 30 days** | Valid for a month |
+| **Until I revoke it** | Valid until revoked |
+
+Consents end automatically with their lifetime. You can withdraw them yourself at any time: ask your assistant to run [`gateway_revoke_my_consents`](/tools/gateway#gateway_revoke_my_consents) — for the app you are using, or with `allApps` for every app. Disconnecting the app in roadbeat cuts its access regardless of any consent (see [Accounts & Sign-in](/accounts/sign-in#disconnect-an-app)). Gateway administrators can revoke consents individually or all at once in the [admin UI](/self-hosting/admin-ui) or through the [Admin API](/api-reference/overview).
+
+<Callout kind="info">
+  The **local sidecar** (Claude Desktop extension, `stdio.js`) holds every consent for its own user, because you configured it yourself. Anonymous connections cannot give consent at all — tools that need it answer *"This action needs a signed-in user."*
+</Callout>
+
+## Confirmation: every time, for consequential actions
+
+Some actions are confirmed **on every call**, with a text that says exactly what will happen:
+
+| Tool | Confirmation text (example) |
+|------|-----------------------------|
+| `cd_remove_goal` | *Delete your goal "Run a half marathon" (year)?* |
+| `cd_remove_bookmark` | *Remove your bookmark "Bürgerfest 2027"?* |
+| `studio_publish_content` | *Publish "Bürgerfest 2027" in roadbeat Studio (it becomes public and is sent to the Discovery Nodes)?* |
+| `studio_unpublish_content` | *Take "Bürgerfest 2027" offline in roadbeat Studio?* |
+
+How the confirmation reaches you:
+
+- **Dialog in the app** (form elicitation) — the app shows the question with a confirm checkbox. Confirm, decline or cancel; on decline nothing is changed (*"The user declined the action. Nothing was changed."*).
+- **Approval page** — apps without dialogs get a link (inside the app or in the tool answer: *"Confirmation required: … Ask the user to open … and approve, then call this tool again with exactly the same arguments."*). Select **Confirm** on the page and let the app repeat the call.
+
+A confirmation is bound to **this exact call**: same app, same tool, same arguments. It is used up by the call it was made for — the next deletion asks again. If the app changes any argument, it needs a new confirmation.
+
+<Callout kind="alert">
+  The local sidecar cannot host an approval page. If your app cannot show confirmation dialogs, the sidecar refuses destructive tools: *"This MCP client cannot show confirmation dialogs, so destructive tools are disabled for the local sidecar."*
+</Callout>
+
+## Approval links
+
+- Approval links look like `https://<gateway>/approve/<id>?sig=…`. They are signed and only valid for the request they were made for.
+- They expire after **10 minutes** by default (operators can change this with `APPROVAL_TTL_SEC`). After that, let the app call the tool again to get a fresh link.
+- A decision is final: an approved or declined link shows *Already decided* when opened again.
+- Treat approval links like a one-time password: do not share them. In release 0.1.0 the page does not yet ask you to sign in again, so anyone with the link could decide it while it is valid.
+
+## Hints the app sees
+
+Every tool also carries truthful hints for the app's own approval UI — `readOnlyHint`, `destructiveHint` (removals, unfollowing), `idempotentHint` and `openWorldHint` (publishing reaches the public). Apps may use them to ask you themselves. They never replace the gateway's own consent and confirmation checks.

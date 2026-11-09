@@ -1,0 +1,131 @@
+---
+title: Operations
+description: Health checks, metrics, tracing, the audit log, catalog switches, data protection requests, retention and a smoke test for a running gateway.
+---
+
+Most of the tasks on this page can also be done in the [admin UI](/self-hosting/admin-ui) at `/admin` — the API calls are shown for automation.
+
+## Health checks
+
+| Endpoint | Use | Answer |
+|----------|-----|--------|
+| `GET /api/v1/health` | Liveness (also the Docker `HEALTHCHECK`) | `200` with version, store, catalog size and configured upstreams |
+| `GET /api/v1/health/ready` | Readiness | `200 {"status":"ready"}` when the database answers, `503` otherwise |
+
+```bash
+curl -s https://mcp.example.com/api/v1/health
+```
+
+```json
+{
+  "status": "ok",
+  "service": "mcp-gateway",
+  "version": "0.1.0",
+  "store": "prisma",
+  "catalog": { "tools": 55, "resources": 33, "prompts": 4 },
+  "upstreams": { "discoveryNodes": 2, "schemaRegistry": "https://schemas.example.com", "contextDirectory": "https://context.example.com" }
+}
+```
+
+## Metrics
+
+`GET /metrics` serves Prometheus metrics (disable with `METRICS_ENABLED=false`, protect with `METRICS_TOKEN`). Keep it off the public internet.
+
+| Metric | Labels | Meaning |
+|--------|--------|---------|
+| `mcp_requests_total` | `method`, `protocol_version`, `transport`, `status` | MCP HTTP requests — `protocol_version` shows how many clients still use `2025-11-25` |
+| `mcp_tool_calls_total` | `tool`, `principal_type`, `result` | Tool calls by outcome (`ok`, `error`, `denied`, `rate_limited`, `input_required`, `replayed`) |
+| `mcp_resource_reads_total` | `server`, `scheme`, `result` | Resource reads |
+| `mcp_requests_in_flight` | `transport` | Requests being served |
+| `mcp_rate_limit_drops_total` | `tool`, `principal_type` | Calls rejected by the rate limiter |
+| `mcp_consent_decisions_total` | `decision` | Consent required / granted / denied |
+| `mcp_confirmations_total` | `mode`, `outcome` | Confirmations by dialog or approval page |
+| `mcp_idempotent_replays_total` | `tool` | Retries answered from the idempotency store |
+| `mcp_backend_latency_seconds` | `service`, `op`, `outcome` | Latency of upstream roadbeat calls (histogram) |
+| `mcpgw_*` | — | Node.js process metrics |
+
+## Tracing
+
+The gateway creates an OpenTelemetry span for every tool call, resource read and prompt and continues the trace context an MCP client sends in `_meta` (`traceparent`, `tracestate`, `baggage`). Spans are only exported when you preload an OpenTelemetry SDK with `node --require …` — the image does not include one, so add it in a derived image if you need traces. Without an SDK, tracing costs nothing. The trace id is always written to the audit log.
+
+## Audit log
+
+Every tool call, resource read, prompt, consent decision, confirmation and admin action is appended to the `mcp_audit` table: time, principal, OAuth client, request and trace id, protocol version, transport, kind, name, result, duration and a payload with hashes and identifiers (never tokens or raw content). Admin actions are written **before** the admin API answers.
+
+Query it through the [Admin API](/api-reference/overview):
+
+```bash
+curl -s "https://mcp.example.com/api/v1/admin/audit?kind=tool_call&name=studio_publish_content&limit=20" \
+  -H "Authorization: Bearer <token with mcp:admin>"
+```
+
+Follow `nextCursor` for older entries. The [admin UI](/self-hosting/admin-ui) shows the same log with filters and exports it as JSON or CSV.
+
+## Catalog switches
+
+Turn a tool, resource or prompt off for your whole deployment — for example to disable publishing through AI apps:
+
+```bash
+curl -X PUT https://mcp.example.com/api/v1/admin/catalog/tool/studio_publish_content \
+  -H "Authorization: Bearer <token with mcp:admin>" -H "Content-Type: application/json" \
+  -d '{"enabled": false}'
+```
+
+The entry disappears from every view; other instances pick up the change within a minute. `GET /api/v1/admin/catalog` lists every entry with its state.
+
+## Consents and connected apps
+
+- `GET /api/v1/admin/clients` — the AI apps that have called the gateway (name, version, first and last seen).
+- `GET /api/v1/admin/consents?principalId=…` — a user's consents; `DELETE /api/v1/admin/consents/{id}` revokes one, `POST /api/v1/admin/consents/revoke-all` revokes all of a user (optionally for one app).
+- `GET /api/v1/admin/confirmations?status=pending` — open approval requests.
+
+Principal ids have the form `<issuer name>:<subject>`, e.g. `web-client:6c1d8e2a-…` or `studio:3f9a…`.
+
+## Data protection requests
+
+To answer a request for one person (principal), use **Data requests** in the [admin UI](/self-hosting/admin-ui#answering-data-protection-requests) or the API:
+
+```bash
+# everything the gateway stores about the person, as one JSON document
+curl -s https://mcp.example.com/api/v1/admin/principals/web-client:6c1d8e2a-4b7f-4f0e-9a51-2d1f0c9e7a10/export \
+  -H "Authorization: Bearer <token with mcp:admin>" -o export.json
+
+# erasure — confirm must repeat the principal id
+curl -X POST https://mcp.example.com/api/v1/admin/principals/web-client:6c1d8e2a-4b7f-4f0e-9a51-2d1f0c9e7a10/erase \
+  -H "Authorization: Bearer <token with mcp:admin>" -H "Content-Type: application/json" \
+  -d '{"confirm": "web-client:6c1d8e2a-4b7f-4f0e-9a51-2d1f0c9e7a10"}'
+```
+
+Erasure deletes the person's consents, approval requests, stored write results and tasks, and re-keys their audit records — and admin records naming them — to a random pseudonym (`erased:<uuid>`) with personal payload fields removed. It cannot be undone; run it when the account is deleted at its authorization server. People can export their own gateway data with `gateway_export_my_data` and withdraw their consents with `gateway_revoke_my_consents`.
+
+## Data retention
+
+An hourly job on every instance deletes what is no longer needed:
+
+| Data | Deleted | Setting |
+|------|---------|---------|
+| Stored write results (idempotency) | when their 24-hour replay window has passed | `IDEMPOTENCY_TTL_SEC` |
+| Consent and confirmation requests | 30 days after they expired | `CONFIRMATION_RETENTION_DAYS` (`0` = keep) |
+| Audit records | after 365 days | `AUDIT_RETENTION_DAYS` (`0` = keep) |
+| Consents | not by the job — they are the record of what a person allowed and are deleted with the person's erasure | — |
+
+The first run starts a minute after the gateway boots; `RETENTION_INTERVAL_MIN` sets the interval (default 60, `0` turns the job off, e.g. when an external job purges). Runs on several instances overlap harmlessly. Each run that deletes something logs the counts.
+
+Back up the database like any other roadbeat service database. Nothing in it is needed to restore user accounts — those live at the authorization servers.
+
+## Smoke test after a deployment
+
+<Steps>
+  <Step title="Health">
+    `curl https://mcp.example.com/api/v1/health` returns `200` and the expected upstream count.
+  </Step>
+  <Step title="Discovery">
+    `curl https://mcp.example.com/.well-known/oauth-protected-resource/mcp` lists your authorization servers, and each of them answers `/.well-known/oauth-authorization-server`.
+  </Step>
+  <Step title="401 challenge">
+    An unauthenticated `POST /mcp` answers `401` with `WWW-Authenticate: Bearer … resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp"`.
+  </Step>
+  <Step title="Real client">
+    `claude mcp add --transport http roadbeat https://mcp.example.com/mcp`, sign in through `/mcp` in Claude Code, call `gateway_whoami`, then a personal or Studio tool to exercise token exchange.
+  </Step>
+</Steps>

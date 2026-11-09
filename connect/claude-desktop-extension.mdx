@@ -1,0 +1,88 @@
+---
+title: Claude Desktop Extension
+description: Install the roadbeat gateway as a one-click Claude Desktop extension (.mcpb) that runs locally, and reuse the same sidecar in other MCP clients.
+---
+
+The **roadbeat extension** for Claude Desktop runs the gateway on your own computer as a local **sidecar**. Claude Desktop starts it, talks to it over stdio, and nothing needs to be reachable from the internet. It is the easiest way to give Claude Desktop your goals, follows and bookmarks.
+
+<Callout kind="info">
+  The extension is in **beta**. Release 0.1.0 ships as an **unsigned** `.mcpb` file — your operator provides it, or you build it yourself (see below). A signed bundle and a listing in the MCP Registry are planned for 1.0.
+</Callout>
+
+<Callout kind="tip">
+  If your provider publishes the extension, the **Connect an AI assistant** card under **Connected AI apps** in the roadbeat Web Client has a download link for it.
+</Callout>
+
+## Install
+
+<Steps>
+  <Step title="Get the bundle">
+    You need the file `roadbeat-mcp-gateway-<version>.mcpb`. To build it from the gateway repository:
+
+    ```bash
+    pnpm install
+    pnpm package:mcpb   # → packaging/mcpb/roadbeat-mcp-gateway-0.1.0.mcpb
+    ```
+  </Step>
+  <Step title="Install it in Claude Desktop">
+    Double-click the `.mcpb` file, or drag it onto **Settings › Extensions** in Claude Desktop. Claude Desktop may warn that the extension is not signed; continue only if you got the file from a source you trust.
+  </Step>
+  <Step title="Configure">
+    Claude Desktop shows the extension's settings:
+
+    | Setting | Default | Meaning |
+    |---------|---------|---------|
+    | roadbeat username or email | empty | Optional. Needed for goals, follows, bookmarks and Compass. Leave empty for public search only. |
+    | roadbeat password | empty | Kept in your operating system's keychain by Claude Desktop; only sent to the Context Directory to sign in. |
+    | Tool set | `core` | `core` (recommended), `all`, or one server: `discovery`, `schema`, `cd`, `goals` |
+    | Discovery Nodes | `https://discover.roadbeat.net` | Comma-separated Discovery Node URLs |
+    | Schema Registry | `https://schemas.roadbeat.net` | Content types |
+    | Context Directory | `https://context.roadbeat.net` | Accounts, goals, bookmarks |
+    | roadbeat web app | `https://app.roadbeat.net` | Used for links to content without its own URL |
+  </Step>
+  <Step title="Enable and try it">
+    Enable the extension and ask Claude: *"What's new on roadbeat for my goals?"*
+  </Step>
+</Steps>
+
+## How the local sidecar behaves
+
+- **Your own session, no OAuth.** The sidecar signs in to the Context Directory with your username and password once and keeps the session in `~/.roadbeat/mcp-gateway/cd-session.json` (readable only by you). Session tokens rotate automatically; the password itself is never written to disk by the sidecar.
+- **What it may do.** The extension grants public reads plus reading and changing your goals, follows and bookmarks. It does not include the data export or any Studio tools.
+- **No consent prompts.** You set the sidecar up yourself, so it holds every consent for your own account. Confirmations still apply: deleting a goal or bookmark asks you in a dialog. If the client cannot show one, the sidecar refuses to delete.
+- **In-memory only.** The sidecar keeps no database. Audit entries, idempotency results and rate-limit windows live in memory and disappear when Claude Desktop stops it.
+- **Only the services you configure.** The sidecar talks to the Discovery Nodes, Schema Registry and Context Directory you entered — nothing else, and no usage data.
+
+## Use the sidecar in other clients
+
+The `.mcpb` file is a ZIP archive. Unpack it to get `server/stdio.js` (a single file, plus `server/skills` and `server/ui`), and use it with any client that can start a local MCP server — for example [Claude Code](/connect/claude-code#run-the-gateway-locally-sidecar) or [Cursor](/connect/cursor#local-sidecar). Node.js 20.19 or newer is required.
+
+<Steps>
+  <Step title="Sign in once">
+    ```bash
+    node server/stdio.js login --username=<your username> --cd-url=https://context.roadbeat.net
+    ```
+    Use `--email=<address>` instead of `--username` if you prefer. The password is read from a hidden prompt, or from `ROADBEAT_CD_PASSWORD` for scripted setups.
+  </Step>
+  <Step title="Start it from your client">
+    ```bash
+    node server/stdio.js --profile=core
+    ```
+  </Step>
+</Steps>
+
+Settings for the sidecar are environment variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `DISCOVERY_NODE_URLS`, `SCHEMA_REGISTRY_URL`, `CONTEXT_DIRECTORY_URL`, `WEB_CLIENT_PUBLIC_URL` | Which roadbeat services to use. Default: a local development stack (`localhost`). |
+| `STDIO_SCOPES` | Space-separated scopes of the local user. Default: every read scope — add `cd:goals:write`, `cd:follows:write`, `cd:bookmarks:write` for changes, `cd:export` for the data export. |
+| `ROADBEAT_MCP_PROFILE` | Alternative to `--profile`. |
+| `CD_SESSION_FILE` | Where `login` stores the session (default `~/.roadbeat/mcp-gateway/cd-session.json`). |
+| `ROADBEAT_CD_USERNAME`, `ROADBEAT_CD_PASSWORD` | Sign in automatically when no session exists (what the Desktop extension does). |
+| `ROADBEAT_CD_ACCESS_TOKEN`, `ROADBEAT_CD_REFRESH_TOKEN` | Use existing Context Directory tokens instead of a session file. |
+| `CONSENT_LOCAL_AUTO_GRANT` | `false` disables the implicit consent; consent-requiring tools then refuse to run locally. |
+
+## Update or remove
+
+Install a newer `.mcpb` the same way; Claude Desktop replaces the old version. To remove the extension, use **Settings › Extensions › roadbeat › Uninstall**, and delete `~/.roadbeat/mcp-gateway/` to remove the stored session.

@@ -1,0 +1,95 @@
+---
+title: Drafting Studio Content with AI
+description: Let an AI assistant draft schema-valid content in your roadbeat Studio organization, fix validation problems and publish after you confirm.
+---
+
+This guide shows how an editor uses an AI assistant to turn an idea into a published roadbeat item — with Studio's content type schema as the guard rail and your confirmation as the final step.
+
+**You need:** a Studio account with the **Editor** or **Admin** role, and an assistant connected to `/mcp/studio` with that account — for example:
+
+```bash
+claude mcp add --transport http roadbeat-studio https://mcp.example.com/mcp/studio
+```
+
+<Steps>
+  <Step title="Find the right content type">
+    ```text
+    Which content types can I use in our Studio? I want to announce a neighbourhood festival.
+    ```
+
+    The assistant calls `studio_list_content_types` and suggests, for example, the **event** type. On `/mcp/studio` it may also see a typed tool such as `studio_create_event` with every field of the type.
+  </Step>
+
+  <Step title="Draft">
+    ```text
+    Create an event draft for "Bürgerfest 2027" on 12 June 2027, 11:00–22:00, Westpark Munich,
+    free entry, in German and English.
+    ```
+
+    The assistant reads the schema (`studio_get_content_type`) or uses the typed tool, then calls `studio_create_draft`. The first time, the gateway asks for your consent to create content in your organization — approve it.
+
+    Nothing is public yet: the item is a **draft**.
+  </Step>
+
+  <Step title="Fix what blocks publishing">
+    If the answer contains `validationErrors`, the draft was saved but does not satisfy the schema yet (for example a missing English title or an invalid date). Ask:
+
+    ```text
+    Fix the validation errors of that draft.
+    ```
+
+    The assistant reads the item (`studio_get_content`), corrects the fields and saves with `studio_update_draft` — using `expectedVersion` so it never overwrites a colleague's newer edit. `studio_validate_content` checks a change without saving it.
+  </Step>
+
+  <Step title="Add an image — with alt text">
+    ```text
+    Use our existing photo of the Westpark stage, or upload the attached picture, and add it to the draft.
+    ```
+
+    The assistant searches the media library (`studio_find_assets` with `mimeType: "image/"`) or uploads the file (`studio_upload_asset`, at most 2 MB) and references the asset in the draft. Make sure it writes a **meaningful alt text** — what the image shows and why it matters — for screen-reader users; Studio warns when you publish images without one. Missing alt text can be added later with `studio_update_asset`.
+  </Step>
+
+  <Step title="Translate (optional)">
+    How this works depends on how your organization localizes content (`studio_list_locales` shows the available locales):
+
+    - **Localized fields** (one item, a value per locale in each field) — machine-translate the missing locale, as below.
+    - **Locale variants** (a separate item per locale) — ask for a variant instead: `studio_create_locale_variant` creates a draft with the slug `<source-slug>-<locale>` and the source fields copied; the assistant then rewrites them in the target language with `studio_update_draft`.
+
+    For localized fields, if your organization has a machine-translation provider set up in Studio:
+
+    ```text
+    How complete is the French version of the Bürgerfest draft? Translate the missing fields — show me a preview first.
+    ```
+
+    The assistant checks `studio_get_translation_status`, then calls `studio_translate_content` with `dryRun` and shows you the preview. After you agree, it runs again without `dryRun`: the translations are saved as a new version with a change note, so you can restore the previous one in Studio. Only empty fields are filled unless you ask it to overwrite. Have someone fluent check machine translations before publishing.
+  </Step>
+
+  <Step title="Review in Studio">
+    Open the draft in Studio to check images, wording and layout. Edits you make there are picked up the next time the assistant reads the item.
+  </Step>
+
+  <Step title="Publish — with confirmation">
+    ```text
+    Publish the Bürgerfest draft.
+    ```
+
+    The gateway asks you: *Publish "Bürgerfest 2027" in roadbeat Studio (it becomes public and is sent to the Discovery Nodes)?* Confirm in the dialog or on the approval page. Only then does `studio_publish_content` run. Taking the item offline works the same way with `studio_unpublish_content`.
+  </Step>
+</Steps>
+
+## Check that it reached the Discovery Nodes
+
+```text
+Is the Bürgerfest item live on all Discovery Nodes?
+```
+
+The assistant calls `studio_get_publish_status` and lists each node with `published`, `unpublished` or `failed` and the last error. If a node failed — or you changed the item after publishing — ask it to send the teaser again: `studio_distribute_to_discovery` re-sends the published item to every node that accepts its content type and reports the result per node.
+
+## Good to know
+
+- Your Studio role applies: viewers can read but not draft; publishing needs the Editor role or higher. The gateway can never do more than you can in Studio.
+- Every create, update and publish ends in the gateway's audit log with your account and the AI app.
+- If a write times out, check the item before retrying, or let the assistant retry with the same `idempotencyKey`.
+- Typed tools exist only for your organization's most used content types. For any other type the assistant uses `studio_create_draft` with the schema from `studio_get_content_type` — the result is the same.
+
+See the full [Studio tools reference](/tools/studio).

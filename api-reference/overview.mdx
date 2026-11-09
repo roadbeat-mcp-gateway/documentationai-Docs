@@ -1,0 +1,70 @@
+---
+title: API Overview
+description: The REST API of the roadbeat MCP Gateway for administrators and the Studio Integration Hub — base URL, authentication, formats, errors and endpoints.
+---
+
+Besides its MCP endpoints, the gateway has a small **REST API** for operating it: the OAuth clients it has seen, activity and audit log, the consent ledger, approval requests, per-deployment catalog switches and GDPR export / erasure per person. The Studio Integration Hub uses part of it to share the gateway's catalog and consent ledger, and the gateway's own [admin UI](/self-hosting/admin-ui) is built on it.
+
+<Callout kind="info">
+  The MCP endpoints (`/mcp`, `/mcp/all`, `/mcp/{server}`) speak the Model Context Protocol, not REST. They are described in [MCP Endpoints](/api-reference/mcp-endpoints).
+</Callout>
+
+## Base URL
+
+| Environment | Base URL |
+|-------------|----------|
+| Your deployment | `https://<gateway host>` — the gateway's `PUBLIC_BASE_URL` |
+| Local development | `http://localhost:3700` |
+
+All REST endpoints live under `/api/v1/`. Every gateway also serves this reference as Swagger UI at `/api/docs` (JSON at `/api/docs-json`).
+
+## Endpoint groups
+
+| Group | Endpoints | Access |
+|-------|-----------|--------|
+| **Admin** | `GET /api/v1/admin/clients`, `GET /api/v1/admin/activity`, `GET /api/v1/admin/audit`, `GET`/`POST /api/v1/admin/consents`, `DELETE /api/v1/admin/consents/{id}`, `POST /api/v1/admin/consents/revoke-all`, `GET /api/v1/admin/principals/{principalId}/export`, `POST /api/v1/admin/principals/{principalId}/erase`, `GET /api/v1/admin/confirmations`, `GET /api/v1/admin/catalog`, `PUT /api/v1/admin/catalog/{kind}/{name}` | `mcp:admin` |
+| **Integration Hub** | `GET /api/v1/catalog`, `GET`/`POST /api/v1/consents` | `mcp:admin` |
+| **System** | `GET /api/v1/health`, `GET /api/v1/health/ready`, `GET /api/v1/admin-ui/config` | public |
+
+## Authentication
+
+Admin and Integration Hub endpoints need a gateway access token with the **`mcp:admin`** scope in the `Authorization` header:
+
+```bash
+curl https://mcp.example.com/api/v1/admin/catalog \
+  -H "Authorization: Bearer <access token>"
+```
+
+The token must be an RFC 9068 access token from a trusted authorization server with the audience `https://<gateway host>/mcp`. See [Authentication](/api-reference/authentication) for how to obtain one.
+
+## Request and response format
+
+- Requests and responses are JSON (`Content-Type: application/json`).
+- Request bodies are validated strictly: unknown properties are rejected with `400`.
+- Times are ISO 8601 strings in UTC.
+- `limit` parameters are clamped to 1–500 (defaults: 50, or 100 for clients).
+- The audit log is paginated with an opaque cursor: pass `nextCursor` from one page as `cursor` to get the next, older page.
+
+## Errors
+
+Errors use the standard NestJS body:
+
+```json
+{
+  "statusCode": 403,
+  "message": "mcp:admin scope required",
+  "error": "Forbidden"
+}
+```
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Invalid body or parameter (the `message` array lists every problem) |
+| `401` | No bearer token, or the token is expired, untrusted, malformed or for another audience (the message says which) |
+| `403` | The token lacks `mcp:admin` |
+| `404` | Unknown consent or catalog entry |
+| `503` | Readiness: the database is not reachable |
+
+## Audit of admin actions
+
+Every write through the Admin and Integration Hub API (granting or revoking consents, switching catalog entries, exports and erasures) is written to the audit log **before** the response is sent, with the acting admin as principal and `transport: "admin-api"`. The record of an erasure names only the pseudonym, never the erased principal.

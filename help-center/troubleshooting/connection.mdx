@@ -1,0 +1,180 @@
+---
+title: Connection & Sign-in
+description: Fix 401 and 403 errors, sign-in problems, missing tools, revoked connections, sidecar login and admin UI sign-in with the roadbeat MCP Gateway.
+---
+
+<Callout kind="tip">
+  First ask your assistant to run **`gateway_whoami`**. It shows which account, app, scopes and endpoint the connection uses — most problems are visible right there.
+</Callout>
+
+## Connecting
+
+<Expandable title="The app cannot reach the gateway at all" default-open="true">
+**Cause:** Hosted assistants (Claude on the web, Claude Desktop connectors, ChatGPT) connect from their vendor's cloud and cannot reach `localhost` or private networks.
+
+**Solution:** Use a gateway with a public HTTPS URL, or use a local client instead — Claude Code, Cursor, the MCP Inspector or the [Claude Desktop extension](/connect/claude-desktop-extension).
+</Expandable>
+
+<Expandable title="405 Method Not Allowed" default-open="false">
+**Cause:** The client uses the old HTTP+SSE transport (it opens a `GET` stream). The gateway only speaks Streamable HTTP.
+
+**Solution:** Choose the HTTP / Streamable HTTP transport, e.g. `claude mcp add --transport http …` instead of `--transport sse`.
+</Expandable>
+
+<Expandable title="404 Unknown MCP endpoint" default-open="false">
+**Cause:** The path after `/mcp/` is not a known view.
+
+**Solution:** Use `/mcp`, `/mcp/all` or one of `/mcp/discovery`, `/mcp/schema`, `/mcp/cd`, `/mcp/goals`, `/mcp/studio`.
+</Expandable>
+
+<Expandable title="403 for a browser-based client" default-open="false">
+**Cause:** The request carries an `Origin` the gateway does not allow (protection against DNS rebinding).
+
+**Solution:** The operator adds the host to `MCP_ALLOWED_ORIGINS`.
+</Expandable>
+
+## Signing in
+
+<Expandable title="401 — Missing Authorization header" default-open="true">
+**Cause:** The app has not signed in yet.
+
+**Solution:** Start the sign-in in the app — in Claude Code `/mcp` › **roadbeat** › **Authenticate**, in Cursor **Connect** in the MCP settings, in Claude reconnect the connector.
+</Expandable>
+
+<Expandable title="401 — Access token was not issued for this resource (audience mismatch)" default-open="false">
+**Cause:** The token was issued for a different gateway URL than the one the app calls — for example `http://` vs. `https://`, another host name, or a gateway whose `PUBLIC_BASE_URL` does not match its public address.
+
+**Solution:** Connect with exactly the URL your operator gave you and sign in again. Operators: `PUBLIC_BASE_URL` must be the public origin, and the authorization server's `OAUTH_GATEWAY_RESOURCES` must contain `${PUBLIC_BASE_URL}/mcp`.
+</Expandable>
+
+<Expandable title="401 — Token issuer is not trusted by this gateway" default-open="false">
+**Cause:** The token comes from an authorization server the gateway does not list in `AUTH_ISSUERS`.
+
+**Solution (operator):** Add the issuer — see [Authorization Servers](/self-hosting/authorization-servers#3-configure-the-gateway). If the gateway log says *No token issuers configured*, every request is rejected until at least one issuer is set.
+</Expandable>
+
+<Expandable title="401 — Access token expired" default-open="false">
+**Cause:** Access tokens live 15 minutes. The app should refresh automatically.
+
+**Solution:** Reconnect the app. If this happens every 30 days, the refresh chain ended — that is expected, sign in again.
+</Expandable>
+
+<Expandable title="403 — insufficient_scope" default-open="false">
+**Cause:** The call needs a permission you have not granted, e.g. `cd:goals:write` to add a goal.
+
+**Solution:** Let the app sign in again (most apps do this on their own) and allow the additional permission on the consent screen. If the permission shows **Not available for your role**, ask a Studio admin. See [Scopes](/accounts/scopes#step-up-asking-for-more-later).
+</Expandable>
+
+<Expandable title='"This sign-in request has expired or is unknown"' default-open="false">
+**Cause:** The consent screen was opened too late or twice.
+
+**Solution:** Close the tab and start the connection again from your AI app.
+</Expandable>
+
+<Expandable title='"Unverified app" on the consent screen' default-open="false">
+**Cause:** roadbeat could not verify who operates the app (its metadata comes from a host that is not on the trusted list).
+
+**Solution:** Only continue if you know where the app comes from. Operators can add trusted hosts with `OAUTH_TRUSTED_CIMD_HOSTS`.
+</Expandable>
+
+## After signing in
+
+<Expandable title='"Your connection to roadbeat was revoked or has expired. Reconnect this app to your roadbeat account."' default-open="true">
+**Cause:** The app was disconnected under **Connected AI apps**, you signed out of the Web Client session the app was bound to, or the connection reached its 30-day limit. Studio may also answer *"The app was disconnected from this account"* — access ends immediately after disconnecting.
+
+**Solution:** Reconnect the app from inside the app and sign in again.
+</Expandable>
+
+<Expandable title="Personal tools (goals, bookmarks, Compass) are missing" default-open="false">
+**Cause:** You signed in with a Studio account, the endpoint is a view without them (`/mcp/schema`, `/mcp/studio`, `/mcp/discovery`), or the operator has not enabled personal data for this sign-in (`upstreams.webclient`).
+
+**Solution:** Sign in with your personal roadbeat account (Web Client) and use `/mcp`, `/mcp/all`, `/mcp/cd` or `/mcp/goals`. The tool error *"Personal roadbeat data … needs a sign-in with your personal roadbeat account (the Web Client), or the local roadbeat MCP sidecar"* means the same.
+</Expandable>
+
+<Expandable title="Studio tools are missing" default-open="false">
+**Cause:** You signed in with a personal account, or the operator has not enabled Studio for this sign-in (`upstreams.studio`).
+
+**Solution:** Sign in with your Studio account and use `/mcp/studio` or `/mcp/all`. Typed `studio_create_<type>` tools exist **only** on `/mcp/studio`, only for your organization's most used content types, and appear up to five minutes after a type becomes one of them — reconnect to refresh the tool list.
+</Expandable>
+
+<Expandable title='"This account cannot reach that roadbeat service through the gateway."' default-open="false">
+**Cause (operator):** Token exchange is not configured — `GATEWAY_OAUTH_KEY` is missing, or the issuer has no matching `upstreams` entry.
+
+**Solution:** See [Authorization Servers](/self-hosting/authorization-servers).
+</Expandable>
+
+<Expandable title='"Your roadbeat account does not allow this (missing permission for this action)."' default-open="false">
+**Cause:** Your role does not allow the action, even though the app has the scope — for example a Studio viewer trying to create a draft, or a role that was lowered after you connected.
+
+**Solution:** Ask a Studio admin for the right role, then reconnect the app.
+</Expandable>
+
+<Expandable title='"The … sign-in service is not reachable right now."' default-open="false">
+**Cause:** The gateway could not reach the Studio or Web Client authorization server for the token exchange.
+
+**Solution:** Try again later. Operators: check the authorization server and its `/.well-known/oauth-authorization-server` route.
+</Expandable>
+
+## Local sidecar and Claude Desktop extension
+
+<Expandable title='"No roadbeat account is connected to this local gateway."' default-open="true">
+**Cause:** The sidecar has neither a stored session nor credentials.
+
+**Solution:** Enter your username and password in the extension settings, or run `node stdio.js login --username=<name>` once and restart the MCP client.
+</Expandable>
+
+<Expandable title='"The roadbeat session expired" / "could not be refreshed"' default-open="false">
+**Cause:** The stored Context Directory session ended (for example after signing out everywhere or a password change).
+
+**Solution:** Run `login` again, or re-enter your password in the extension settings.
+</Expandable>
+
+<Expandable title='"Signing in to roadbeat failed — check the username and password in the extension settings."' default-open="false">
+**Cause:** Wrong credentials, or the Context Directory URL in the settings is wrong.
+
+**Solution:** Check username (or e-mail), password and the **Context Directory** setting.
+</Expandable>
+
+<Expandable title='"No TTY for the password prompt — set ROADBEAT_CD_PASSWORD instead"' default-open="false">
+**Cause:** `login` was run without an interactive terminal.
+
+**Solution:** Run it in a terminal, or set `ROADBEAT_CD_PASSWORD` for that one command.
+</Expandable>
+
+<Expandable title="Searches return nothing in the sidecar" default-open="false">
+**Cause:** Without settings, the sidecar uses a local development stack (`localhost`).
+
+**Solution:** Set `DISCOVERY_NODE_URLS`, `SCHEMA_REGISTRY_URL`, `CONTEXT_DIRECTORY_URL` and `WEB_CLIENT_PUBLIC_URL` — see [the sidecar settings](/connect/claude-desktop-extension#use-the-sidecar-in-other-clients).
+</Expandable>
+
+## Admin UI
+
+<Expandable title='"Sign-in is not set up"' default-open="false">
+**Cause:** The gateway has no authorization server for the admin UI — no `AUTH_ISSUERS` entry with a Studio upstream, and no `ADMIN_UI_ISSUER`.
+
+**Solution:** Add the Studio authorization server to `AUTH_ISSUERS` (or set `ADMIN_UI_ISSUER`) and restart the gateway. See [Admin UI](/self-hosting/admin-ui#operator-guide).
+</Expandable>
+
+<Expandable title='"No admin permission"' default-open="false">
+**Cause:** You signed in, but your account did not receive `mcp:admin` — only platform super admins get it.
+
+**Solution:** Sign in with a platform super admin account, or ask one to make you a platform admin in Studio.
+</Expandable>
+
+<Expandable title="Studio refuses the admin UI's sign-in (unknown client or redirect URI)" default-open="false">
+**Cause:** On a plain-HTTP gateway the UI's client `roadbeat-mcp-gateway-admin` is not registered in Studio, or its redirect URI differs. On HTTPS, Studio could not fetch the UI's metadata document (`/admin/oauth-client.json`) — for example because `OAUTH_CIMD_ENABLED=false` or the gateway is not reachable from Studio.
+
+**Solution:** Register the client with the redirect URI `${PUBLIC_BASE_URL}/admin/callback`, or make `/admin/oauth-client.json` reachable for Studio. See [Admin UI](/self-hosting/admin-ui#operator-guide).
+</Expandable>
+
+<Expandable title='"Sign-in failed" — the response does not belong to this tab / came from an unexpected authorization server' default-open="false">
+**Cause:** The sign-in was completed in another tab, took too long, or the response's issuer does not match the configured one.
+
+**Solution:** Start again from the sign-in page in the same tab. If it persists, check that `ADMIN_UI_ISSUER` names the server you actually sign in at.
+</Expandable>
+
+<Expandable title='"The admin UI is not installed on this gateway"' default-open="false">
+**Cause:** The gateway runs from source without a UI build.
+
+**Solution:** Run `pnpm --filter @roadbeat/mcp-gateway-web build`, or point `ADMIN_UI_DIR` at a build. The Docker image includes the UI.
+</Expandable>

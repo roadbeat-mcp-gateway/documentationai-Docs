@@ -1,0 +1,137 @@
+---
+title: Catalog Overview
+description: All tools, resources and prompts of the roadbeat MCP Gateway, which endpoint serves them, and which accounts can see them.
+---
+
+The gateway ships a fixed, code-reviewed catalog — no tools are loaded from elsewhere at runtime. Release 0.1.0 contains **55 tools**, **33 resources** (including templates), **4 prompts** and **3 skills**, plus the typed `studio_create_<type>` tools generated for your Studio organization.
+
+## Endpoints (views)
+
+| Endpoint | Serves | Good for |
+|----------|--------|----------|
+| `/mcp` | The **core** set: at most 20 everyday tools | Claude connectors, ChatGPT, Cursor |
+| `/mcp/all` | Everything your account may use | Claude Code and clients with tool search |
+| `/mcp/discovery` | [Discovery](/tools/discovery) tools and resources, the why-card | Research agents |
+| `/mcp/schema` | [Schema Registry](/tools/schema-registry) | Developers, content modelling |
+| `/mcp/cd` | [Goal catalog](/tools/goal-catalog) and [your goals, follows, bookmarks](/tools/personal-data) | Personal assistants |
+| `/mcp/goals` | [Compass](/tools/compass) | Personal assistants |
+| `/mcp/studio` | [Studio](/tools/studio), including the typed `studio_create_<type>` tools and `studio://` resources | Editors |
+
+`/mcp/pod` and `/mcp/augmentor` exist but are empty in release 0.1.0 — the Content Pod and Augmentor servers follow later. `search`, `fetch` and the [gateway tools](/tools/gateway) are part of `/mcp` and `/mcp/all` only.
+
+## Who sees which tools
+
+Tools appear only when your account can use them:
+
+| Signed in as | Core `/mcp` | Additionally on `/mcp/all` and server views |
+|--------------|-------------|---------------------------------------------|
+| Personal account (Web Client) | 13 tools | personal-data and Compass tools |
+| Organization account (Studio) | 10 tools | Studio tools |
+| Local sidecar | 13 tools | personal-data and Compass tools |
+| Anonymous | 8 tools | public tools only (no data-rights tools) |
+
+Operators can switch individual tools, resources and prompts off for their deployment; switched-off entries disappear from every view.
+
+## All tools
+
+| Tool | What it does | Server | Core | Accounts |
+|------|--------------|--------|:----:|----------|
+| `search` | Search all roadbeat content, citable results | web | ✓ | all |
+| `fetch` | Full teaser for a `search` result | web | ✓ | all |
+| `gateway_whoami` | Show the connected account, app and scopes | gateway | ✓ | all |
+| `gateway_export_my_data` | Export what the gateway stores about you | gateway | ✓ | signed-in, local |
+| `gateway_revoke_my_consents` | Withdraw your consents for this or every app | gateway | ✓ | signed-in, local |
+| `discovery_search` | Faceted search with filters, places, dates | discovery | ✓ | all |
+| `discovery_search_by_goal` | Content for a goal template | discovery | ✓ | all |
+| `discovery_suggest` | Autocomplete | discovery | ✓ | all |
+| `discovery_more_like_this` | Similar teasers | discovery | | all |
+| `discovery_explain_result` | "Why am I seeing this?" for a search | discovery | | all |
+| `discovery_get_teaser` | One teaser by id | discovery | | all |
+| `schema_list_types` | List content types | schema | ✓ | all |
+| `schema_lookup_type` | Describe a content type and its fields | schema | | all |
+| `schema_validate_payload` | Validate content against its schema | schema | | all |
+| `schema_list_categories` | Content-type categories | schema | | all |
+| `cd_search_goal_templates` | Search goal templates | cd | ✓ | all |
+| `cd_get_goal_template` | One goal template in detail | cd | | all |
+| `cd_list_goals` | Your goals | cd | ✓ | personal, local |
+| `cd_add_goal` | Add a goal | cd | | personal, local |
+| `cd_update_goal` | Change a goal | cd | | personal, local |
+| `cd_record_goal_progress` | Record progress | cd | | personal, local |
+| `cd_reorder_goals` | Reorder goals | cd | | personal, local |
+| `cd_remove_goal` | Delete a goal (confirmation) | cd | | personal, local |
+| `cd_list_follows` | Publishers you follow | cd | | personal, local |
+| `cd_follow_publisher` | Follow a publisher | cd | | personal, local |
+| `cd_unfollow_publisher` | Unfollow a publisher | cd | | personal, local |
+| `cd_list_bookmarks` | Your bookmarks | cd | ✓ | personal, local |
+| `cd_add_bookmark` | Bookmark a teaser | cd | | personal, local |
+| `cd_remove_bookmark` | Remove a bookmark (confirmation) | cd | | personal, local |
+| `cd_create_collection` | Create a bookmark collection | cd | | personal, local |
+| `cd_add_to_collection` | Put a bookmark into a collection | cd | | personal, local |
+| `cd_export_data` | GDPR export of your data | cd | | personal, local |
+| `compass_review_today` | What's new for your goals | goals | ✓ | personal, local |
+| `compass_match_content_to_goals` | Which of your goals a teaser serves | goals | | personal, local |
+| `compass_explain_match` | Why a teaser matches a goal | goals | | personal, local |
+| `compass_suggest_goals` | Suggest related goals | goals | | personal, local |
+| `studio_list_content` | List your organization's content | studio | | organization |
+| `studio_get_content` | Read one content item | studio | | organization |
+| `studio_list_content_types` | Content types enabled in your organization | studio | | organization |
+| `studio_get_content_type` | JSON Schema of a content type | studio | | organization |
+| `studio_validate_content` | Dry-run validation | studio | | organization |
+| `studio_create_draft` | Create a draft | studio | | organization |
+| `studio_update_draft` | Update a content item | studio | | organization |
+| `studio_publish_content` | Publish (confirmation) | studio | | organization |
+| `studio_unpublish_content` | Unpublish (confirmation) | studio | | organization |
+| `studio_get_publish_status` | Where an item's teaser is on the Discovery Nodes | studio | | organization |
+| `studio_distribute_to_discovery` | Re-send a published item's teaser to the nodes | studio | | organization |
+| `studio_get_translation_status` | How complete each locale of an item is | studio | | organization |
+| `studio_translate_content` | Machine-translate an item into a locale (new version) | studio | | organization |
+| `studio_list_locales` | Locales enabled in your organization | studio | | organization |
+| `studio_list_locale_variants` | Per-locale variants of an item | studio | | organization |
+| `studio_create_locale_variant` | Create a draft variant for another locale | studio | | organization |
+| `studio_find_assets` | Search the media library | studio | | organization |
+| `studio_upload_asset` | Upload an image or file (≤ 2 MB) with alt text | studio | | organization |
+| `studio_update_asset` | Set alt text, title or description of an asset | studio | | organization |
+| `studio_create_<type>` | Typed draft tool per content type, on `/mcp/studio` only | studio | | organization |
+
+## Resources
+
+Resources are read-only documents an app can attach as context. Templates (with `{…}`) stand for many concrete resources; apps list them with `resources/templates/list`. The core endpoint `/mcp` only serves `gateway://me` and `gateway://me/export` — every other resource is available on `/mcp/all` and on the view of its server (`discovery://` on `/mcp/discovery`, `schema://` on `/mcp/schema`, `cd://` on `/mcp/cd`, `studio://` on `/mcp/studio`).
+
+| URI | Content | Accounts |
+|-----|---------|----------|
+| `gateway://me` | The current connection (same as `gateway_whoami`) | all |
+| `gateway://me/export` | Everything the gateway stores about you (consent class `pii_egress`) | signed-in, local |
+| `discovery://content-types` | Content types on the Discovery Nodes, with counts | all |
+| `discovery://nodes` | The federated Discovery Nodes, status and coverage | all |
+| `discovery://facets/{contentType}` | Facet fields and values of a content type | all |
+| `discovery://teaser/{teaserId}` | One sanitized teaser | all |
+| `discovery://publishers/{publisherId}` | Publisher profile and trust signals (no contact data) | all |
+| `schema://types` | All active content types | all |
+| `schema://types/{typeId}` | Metadata JSON Schema (`application/schema+json`) | all |
+| `schema://types/{typeId}/form` | Studio editor form definition | all |
+| `schema://types/{typeId}/teaser` | Teaser mapping | all |
+| `schema://categories` | Categories with counts | all |
+| `schema://categories/i18n/{locale}` | Localized category labels | all |
+| `cd://goals/trees` | The goal trees | all |
+| `cd://goals/trees/{treeId}` | Categories and subcategories of a tree | all |
+| `cd://goals/templates/{filtersetId}` | All goal templates of a subcategory | all |
+| `cd://geo/countries` | Countries (ISO 3166-1) | all |
+| `cd://geo/regions/{countryCode}` | Regions of a country (ISO 3166-2) | all |
+| `cd://me/profile` | Your profile | personal, local |
+| `cd://me/goals`, `cd://me/goals/{goalId}` | Your goals | personal, local |
+| `cd://me/follows` | Publishers you follow | personal, local |
+| `cd://me/bookmarks`, `cd://me/bookmarks/collections/{collectionId}` | Your bookmarks | personal, local |
+| `cd://me/export` | Your full data export | personal, local |
+| `studio://content-types`, `studio://content-types/{typeId}` | Your organization's content types and their schemas | organization |
+| `studio://content/{id}`, `studio://content/by-slug/{contentType}/{slug}` | One content item with its fields | organization |
+| `studio://versions/{contentId}`, `studio://versions/{contentId}/{version}` | Version history of an item and one snapshot | organization |
+| `studio://assets/{id}` | One media library asset | organization |
+| `ui://roadbeat/why-card.html` | The ["why am I seeing this?" card](/tools/why-card) | all (on `/mcp/all`, `/mcp/discovery`, `/mcp/goals`) |
+
+## Conventions every tool follows
+
+- **Structured results.** Every result has `structuredContent` (JSON, with an `outputSchema` where declared) and the same data as text for clients that only read text.
+- **Untrusted content is marked.** Results containing publisher or user text carry `_meta["net.roadbeat/untrusted"]: true`.
+- **Tool metadata.** Each tool carries `_meta["net.roadbeat/server"]` and `_meta["net.roadbeat/consentClass"]`, plus truthful `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint` annotations.
+- **Stable order.** Lists are sorted by name and carry caching hints (`ttlMs`, `cacheScope: "private"`), so clients can cache the tool list.
+- **Errors as results.** Expected failures (not found, invalid input, upstream unavailable) come back as tool results with `isError: true` and a sentence the assistant can act on.

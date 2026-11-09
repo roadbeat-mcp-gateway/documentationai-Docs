@@ -1,0 +1,92 @@
+---
+title: Gateway
+description: gateway_whoami shows who a connection is; gateway_export_my_data and gateway_revoke_my_consents let you exercise your data rights.
+---
+
+The gateway server answers questions about the connection itself and about **your data in the gateway**. All its tools and resources are in the core set (`/mcp`) and need no scope.
+
+| Tool / resource | Purpose | Accounts | Consent class |
+|-----------------|---------|----------|---------------|
+| `gateway_whoami` | Who am I connected as? | all | `read_public` |
+| `gateway_export_my_data` | Export what the gateway stores about you | signed-in and local | `pii_egress` |
+| `gateway_revoke_my_consents` | Withdraw the consents you gave to AI apps | signed-in and local | `read_public` |
+| `gateway://me` | The current connection | all | `read_public` |
+| `gateway://me/export` | Your full gateway data export | signed-in and local | `pii_egress` |
+
+## `gateway_whoami`
+
+*Who am I connected as?* Takes no arguments and returns:
+
+<ResponseField name="principal" field-type="object" required="true">
+  `type` (`user`, `local`, `anonymous` or `service`), `id` (`<issuer name>:<subject>`), `displayName`, `organizationId` (Studio sign-ins) and `issuer` (the roadbeat sign-in that issued the token).
+</ResponseField>
+<ResponseField name="client" field-type="object" required="true">
+  `oauthClientId` (the app's authenticated identity) plus the `name` and `version` the app reports about itself.
+</ResponseField>
+<ResponseField name="scopes" field-type="array" required="true">
+  The permissions granted to this connection, sorted.
+</ResponseField>
+<ResponseField name="catalogView" field-type="string" required="true">
+  `core`, `all` or the server name of the endpoint you connected to.
+</ResponseField>
+<ResponseField name="transport" field-type="string" required="true">
+  `http` or `stdio`.
+</ResponseField>
+<ResponseField name="protocolEra" field-type="string" required="true">
+  `modern` (MCP `2026-07-28`) or `legacy` (MCP `2025-11-25`).
+</ResponseField>
+<ResponseField name="gatewayVersion" field-type="string" required="true">
+  e.g. `0.1.0`.
+</ResponseField>
+
+```json
+{
+  "principal": {
+    "type": "user",
+    "id": "web-client:6c1d8e2a-4b7f-4f0e-9a51-2d1f0c9e7a10",
+    "displayName": "Alex",
+    "issuer": "https://app.example.com"
+  },
+  "client": { "oauthClientId": "https://ai-app.example/oauth/client-metadata.json", "name": "example-ai-app" },
+  "scopes": ["cd:bookmarks:read", "cd:goals:read", "cd:read:public", "discovery:read", "schema:read"],
+  "catalogView": "core",
+  "transport": "http",
+  "protocolEra": "modern",
+  "gatewayVersion": "0.1.0"
+}
+```
+
+The tool is marked as the **profile tool** for ChatGPT (`_meta["openai/profile"]`), so ChatGPT can show which roadbeat account a connector uses.
+
+<Callout kind="info">
+  The app's `name` and `version` are what the app says about itself — shown for convenience, never used for decisions. The authenticated identity is `oauthClientId`.
+</Callout>
+
+## `gateway_export_my_data`
+
+*Export what the gateway stores about me.* A GDPR export of everything this gateway holds about the signed-in person: the consents given to AI apps, consent and confirmation requests, and the audit log of their tool calls (names, times, results — arguments only as hashes).
+
+It takes no arguments and returns `generatedAt`, the record `counts` per section, `truncated` (very long audit histories are cut to the newest 50,000 records), your **active consents** (app, consent class, lifetime, granted, expires) and a link to the full JSON document, the resource **`gateway://me/export`**.
+
+- Your data leaves roadbeat into the AI app, so the first call asks for your consent (`pii_egress`). Limited to 2 calls per minute.
+- Data held by the roadbeat services themselves is exported there: your goals, follows and bookmarks with [`cd_export_data`](/tools/personal-data#export-your-data), Studio content in Studio.
+- Not available to anonymous connections.
+
+## `gateway_revoke_my_consents`
+
+*Revoke the consents I gave to AI apps.* Withdraws the gateway consents of the signed-in person.
+
+<ParamField body="allApps" param-type="boolean">
+  `true` revokes the consents of **every** AI app; without it, only those of the app you are using.
+</ParamField>
+
+Returns the number of `revoked` consents and the `scope` (`this_app` or `all_apps`). Afterwards, every personal or write action asks for consent again. Marked destructive; it needs no consent itself.
+
+<Callout kind="tip">
+  Revoking consents does not disconnect the app — it can still use public tools and ask you again. To cut an app off completely, use **Connected AI apps** in your roadbeat account (see [Accounts & Sign-in](/accounts/sign-in#disconnect-an-app)).
+</Callout>
+
+## Resources
+
+- **`gateway://me`** — the same information as `gateway_whoami` (JSON, never cached) for clients that prefer attaching context over calling tools.
+- **`gateway://me/export`** — the full export behind `gateway_export_my_data`: one JSON document with your consents (including revoked ones), confirmation requests, stored write results (metadata only, without the results) and audit log. Consent class `pii_egress`, never cached.

@@ -1,0 +1,58 @@
+---
+title: Claude
+description: Add the roadbeat MCP Gateway to Claude on the web, Claude Desktop and the Claude mobile apps as a custom connector with OAuth sign-in.
+---
+
+Claude's **custom connectors** let Claude on the web, Claude Desktop and the mobile apps use the roadbeat gateway. You add the connector once; it is then available in every Claude app signed in to the same Claude account.
+
+<Callout kind="alert">
+  Custom connectors are called **from Anthropic's cloud**, not from your device. The gateway must be reachable on the public internet over HTTPS. A gateway on `localhost` or in your LAN will not work — use [Claude Code](/connect/claude-code) or the [Claude Desktop extension](/connect/claude-desktop-extension) instead.
+</Callout>
+
+<Callout kind="tip">
+  **Personal roadbeat account?** Open **Connected AI apps** in the roadbeat Web Client: if your provider has set up a gateway, the **Connect an AI assistant** card shows the connector URL to copy and these steps.
+</Callout>
+
+## Add the connector
+
+<Steps>
+  <Step title="Open the connector settings">
+    In Claude, go to **Settings › Connectors** and choose **Add custom connector**. In organization plans, an owner may have to add the connector for the whole organization first.
+  </Step>
+  <Step title="Enter the gateway URL">
+    - **Name:** `roadbeat`
+    - **URL:** your gateway's MCP endpoint, for example `https://mcp.example.com/mcp`
+
+    Leave the advanced OAuth fields empty. Claude discovers the roadbeat sign-in automatically, and roadbeat recognizes Claude's published client identity, so no client ID or secret is needed.
+  </Step>
+  <Step title="Connect and sign in">
+    Select **Connect**. A browser window opens at the roadbeat sign-in your gateway uses — the roadbeat Web Client for personal accounts or roadbeat Studio for organization accounts. Sign in, review the permissions and select **Allow**.
+  </Step>
+  <Step title="Turn the tools on in a chat">
+    In a conversation, open the tools menu and make sure **roadbeat** is enabled. Ask *"Which roadbeat account am I connected as?"* to check.
+  </Step>
+</Steps>
+
+<Callout kind="tip">
+  The account you sign in with decides what Claude can reach: a personal sign-in gives it your goals and bookmarks, a Studio sign-in your organization's content. To use both, add two connectors (for example `roadbeat` and `roadbeat studio`) pointing at the gateway URLs your operator gives you for personal and organization accounts — note that some Claude plans limit the number of custom connectors.
+</Callout>
+
+## Which endpoint to use
+
+Claude connectors load every tool of a server into the conversation, so use the compact **core** endpoint `/mcp` for everyday use. For Studio work, add a second connector with `/mcp/studio` — it contains all Studio tools, including the typed `studio_create_<type>` tools. See [Catalog Overview](/tools/overview).
+
+## Consent and confirmations in Claude
+
+- The first time Claude reads your goals or changes something, the gateway asks for your consent. Claude either shows a link to roadbeat's approval page or asks you to open it. Approve, return to Claude and let it continue.
+- Deleting a goal or bookmark and publishing Studio content ask for a confirmation every time. If Claude cannot show a confirmation dialog, you get an approval link instead.
+
+Some Claude features (for example research modes) may call tools without asking you first. That is fine: consent and confirmation are enforced **by the gateway**, not by the client.
+
+## Disconnect
+
+- In Claude: **Settings › Connectors › roadbeat › Disconnect** (or remove the connector).
+- In roadbeat: **Connected AI apps** in the Web Client, or **Profile › Connected AI apps** in Studio. Disconnecting there cuts off access to your data immediately. See [Accounts & Sign-in](/accounts/sign-in#disconnect-an-app).
+
+<Callout kind="info">
+  Menu names in Claude can change between releases. If you cannot find an option, see Anthropic's help article on [custom connectors](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp).
+</Callout>

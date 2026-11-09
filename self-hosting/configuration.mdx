@@ -1,0 +1,157 @@
+---
+title: Configuration Reference
+description: Every environment variable of the roadbeat MCP Gateway, grouped by topic, with defaults, examples and the rules enforced in production.
+---
+
+The gateway is configured entirely through environment variables. They are validated once at startup; an invalid or unsafe combination stops the process with a message naming the variable. In development, a `.env` file in the working directory is loaded (real environment variables win).
+
+## Server
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NODE_ENV` | `development` | `development`, `test` or `production`. Production enforces the safety rules below. |
+| `PORT` | `3700` | HTTP port. |
+| `PUBLIC_BASE_URL` | `http://localhost:3700` | Public origin of the gateway. The canonical resource URIs — and therefore the token audiences — are derived from it: `${PUBLIC_BASE_URL}/mcp`, `/mcp/all`, `/mcp/{server}`. |
+| `LOG_LEVEL` | `log` | `error`, `warn`, `log`, `debug` or `verbose`. |
+
+## Storage
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GATEWAY_STORE` | `prisma` | `prisma` (PostgreSQL) for deployed gateways; `memory` for development and tests. **`memory` is refused in production** (HTTP mode). |
+| `DATABASE_URL` | — | PostgreSQL connection string. Required with `GATEWAY_STORE=prisma`. |
+| `REDIS_URL` | — | Optional. Shares rate-limit windows across instances; without it each instance counts on its own. |
+
+## MCP transport
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_ALLOWED_ORIGINS` | `localhost`, `127.0.0.1`, `[::1]` and the host of `PUBLIC_BASE_URL` | Comma-separated hostnames allowed as browser `Origin` on `/mcp`. Requests without `Origin` (most MCP clients) always pass. |
+| `MCP_LEGACY_STATELESS` | `true` | Serve MCP `2025-11-25` clients statelessly next to `2026-07-28` clients. `false` rejects legacy clients. |
+| `MCP_MAX_BODY_BYTES` | `4194304` | Maximum request body (4 MiB). |
+
+## Authorization
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AUTH_ISSUERS` | — | JSON array of trusted authorization servers — see below. |
+| `GATEWAY_OAUTH_CLIENT_ID` | `roadbeat-mcp-gateway` | Client id of the gateway's own confidential client at the authorization servers (used for token exchange only). |
+| `GATEWAY_OAUTH_KEY` | — | Private ES256 (EC P-256) JWK of that client, as JSON or base64. Without it, no upstream user calls are possible over HTTP (personal and Studio tools fail). |
+| `GATEWAY_OAUTH_KEY_FILE` | — | Alternative: path to a file with that JWK. |
+| `AUTH_ALLOW_ANONYMOUS` | `false` | Accept requests without a token as an anonymous principal (public reads only). Clients then never see a `401` and will not offer sign-in. |
+| `AUTH_ACCEPT_ROOT_AUDIENCE` | `true` | Accept a token issued for `/mcp` on every view (`/mcp/all`, `/mcp/{server}`). `false` requires a token per view. |
+| `AUTH_CLOCK_TOLERANCE_SEC` | `30` | Allowed clock skew for token times (0–300). |
+| `AUTH_DEV_JWKS_FILE` | — | Development only: public keys written by `pnpm dev:token`; registers the issuer `roadbeat-dev`. **Ignored in production.** |
+| `REQUEST_STATE_SECRET` | random per process | HMAC key (≥ 32 bytes) for MRTR request state and approval links. **Required in production** and identical on all instances; a random key breaks pending approvals on restart. |
+
+### `AUTH_ISSUERS`
+
+Each entry describes one authorization server whose tokens the gateway accepts:
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `name` | — | Short label, used in logs and principal ids (`<name>:<sub>`), e.g. `studio`, `web-client`. |
+| `issuer` | — | Exact `iss` claim value (the AS's public origin). |
+| `jwksUri` | — | The AS's JWKS URL, e.g. `https://studio.example.com/oauth/jwks`. |
+| `jwksFile` | — | Local JWKS file — development only, refused in production. |
+| `advertise` | `true` | List this issuer in the Protected Resource Metadata (`authorization_servers`). |
+| `principalType` | `user` | `user` for Studio and Web Client; `service` for automation issuers. |
+| `orgClaim` | `organizationId` | Claim with the organization id (Studio tokens). |
+| `upstreams` | `{}` | APIs reachable by token exchange for this issuer's users: `{"studio": "<Studio API resource>"}` enables Studio tools, `{"webclient": "<Web Client API resource>"}` enables personal-data and Compass tools. |
+| `tokenEndpoint` | from AS metadata | Override the token endpoint used for the exchange. |
+
+```json
+[
+  {
+    "name": "studio",
+    "issuer": "https://studio.example.com",
+    "jwksUri": "https://studio.example.com/oauth/jwks",
+    "principalType": "user",
+    "orgClaim": "organizationId",
+    "upstreams": { "studio": "https://studio.example.com/api" }
+  },
+  {
+    "name": "web-client",
+    "issuer": "https://app.example.com",
+    "jwksUri": "https://app.example.com/oauth/jwks",
+    "principalType": "user",
+    "upstreams": { "webclient": "https://app.example.com/api" }
+  }
+]
+```
+
+When several issuers are advertised, the MCP client chooses which one to use for sign-in; most clients take the first entry. See [Authorization Servers](/self-hosting/authorization-servers).
+
+## Consent and confirmation
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CONSENT_LOCAL_AUTO_GRANT` | `true` | The local stdio user holds every consent. |
+| `APPROVAL_TTL_SEC` | `600` | Lifetime of approval links and MRTR request state (10 minutes). |
+| `IDEMPOTENCY_TTL_SEC` | `86400` | How long write results are replayed for a repeated `idempotencyKey` (24 hours); the retention job deletes them afterwards. |
+
+## Retention
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AUDIT_RETENTION_DAYS` | `365` | Audit records older than this are deleted (0–3650; `0` = keep forever). |
+| `CONFIRMATION_RETENTION_DAYS` | `30` | Consent and confirmation requests are deleted this many days after they expired (0–3650; `0` = keep forever). |
+| `RETENTION_INTERVAL_MIN` | `60` | How often the retention job runs, in minutes (`0` = never, e.g. when an external job purges). |
+
+Consents are not purged by the job; they are deleted when the person is erased. See [Operations](/self-hosting/operations#data-retention).
+
+## Admin UI
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ADMIN_UI_ENABLED` | `true` | Serve the admin UI at `/admin`. |
+| `ADMIN_UI_ISSUER` | the issuer with a `studio` upstream | `AUTH_ISSUERS` `name` or `issuer` the admin UI signs in at. Startup fails if it names an unknown issuer. |
+| `ADMIN_UI_CLIENT_ID` | HTTPS: `${PUBLIC_BASE_URL}/admin/oauth-client.json` · HTTP: `roadbeat-mcp-gateway-admin` | The UI's public OAuth client id. The HTTPS default is a Client ID Metadata Document the gateway serves itself; the HTTP default must be registered at the authorization server with the redirect URI `${PUBLIC_BASE_URL}/admin/callback`. |
+| `ADMIN_UI_DIR` | `./admin-ui` (image) or `apps/web/dist/browser` (repository) | Directory of the built UI. |
+
+See [Admin UI](/self-hosting/admin-ui).
+
+## Upstream roadbeat services
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DISCOVERY_NODE_URLS` | `http://localhost:3300` | Comma-separated Discovery Node base URLs, searched in parallel and merged. |
+| `SCHEMA_REGISTRY_URL` | `http://localhost:3200` | Schema Registry base URL. |
+| `CONTEXT_DIRECTORY_URL` | `http://localhost:3100` | Context Directory base URL (public goal catalog and geo; the sidecar's personal data). |
+| `WEB_CLIENT_PUBLIC_URL` | `http://localhost:3601` | Public Web Client origin, used for user-openable fallback links to content. |
+| `STUDIO_API_URL` | `http://localhost:3000` | Studio API base URL. |
+| `STUDIO_TYPED_TOOLS_MAX` | `12` | Typed `studio_create_<type>` tools per organization on `/mcp/studio` (most used types first; `0` = generic tools only; max 200). Each adds about 40 KB to every tool list. |
+| `UPSTREAM_TIMEOUT_MS` | `10000` | Timeout for upstream calls. |
+| `UPSTREAM_CACHE_TTL_MS` | `30000` | Short in-process cache for upstream reads (Discovery Nodes rate-limit per caller IP). |
+
+## Observability
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `METRICS_ENABLED` | `true` | Serve Prometheus metrics at `/metrics`. |
+| `METRICS_TOKEN` | — | When set, `/metrics` requires `Authorization: Bearer <METRICS_TOKEN>`. |
+
+## stdio sidecar
+
+These only apply when the gateway runs as a local sidecar (`stdio.js`). The sidecar always uses the in-memory store.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STDIO_SCOPES` | every read scope | Space-separated scopes of the local user. Add write scopes (`cd:goals:write`, …) or `cd:export` explicitly. |
+| `STDIO_PRINCIPAL_NAME` | `local user` | Display name of the local principal. |
+| `ROADBEAT_MCP_PROFILE` | `core` | Catalog view if `--profile` is not given: `core`, `all`, `discovery`, `schema`, `cd`, `goals`. |
+| `CD_SESSION_FILE` | `~/.roadbeat/mcp-gateway/cd-session.json` | Where `stdio.js login` stores the Context Directory session (mode 0600). |
+| `ROADBEAT_CD_ACCESS_TOKEN`, `ROADBEAT_CD_REFRESH_TOKEN` | — | Use these Context Directory tokens instead of a session file (rotation stays in memory). |
+| `ROADBEAT_CD_USERNAME`, `ROADBEAT_CD_PASSWORD` | — | Sign in automatically when there is no session (used by the Claude Desktop extension; the password can also feed `login`). |
+
+## Production rules
+
+In `NODE_ENV=production` the gateway refuses to start when:
+
+- `REQUEST_STATE_SECRET` is missing or shorter than 32 bytes,
+- `GATEWAY_STORE=memory` (HTTP mode),
+- `GATEWAY_STORE=prisma` without `DATABASE_URL`,
+- an issuer uses `jwksFile`, or has neither `jwksUri` nor `jwksFile`,
+- `GATEWAY_OAUTH_KEY` is not a private EC P-256 JWK.
+
+`AUTH_DEV_JWKS_FILE` is silently ignored in production.

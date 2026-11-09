@@ -1,0 +1,58 @@
+---
+title: Compass
+description: Goal-centric Compass tools — what's new for your goals, which goals a piece of content serves, why it matches, and suggestions for new goals.
+---
+
+**Compass** is roadbeat's alternative to the algorithmic feed: you set goals, and roadbeat finds content that serves them. The Compass tools combine your goals (Context Directory) with goal-driven search on the Discovery Nodes. Each template-based goal runs its own **content queries** with your parameters, and the Discovery Nodes report which query matched — the basis for every "why am I seeing this?" answer.
+
+Available with your **personal account** (Web Client) or the **local sidecar**. All tools are read-only and use the consent class `read_personal` (consent on first use).
+
+Endpoint: `/mcp/goals` (and `/mcp/all`; `compass_review_today` is also in the core set).
+
+## Tools
+
+### `compass_review_today`
+
+For each of your **active** goals, highest priority first: new content since a date.
+
+<ParamField body="since" param-type="string">ISO date; default seven days ago.</ParamField>
+<ParamField body="maxGoals" param-type="integer">1–10, default 5.</ParamField>
+<ParamField body="perGoal" param-type="integer">1–10 items per goal, default 3.</ParamField>
+
+Each goal in the answer has its summary, the `basis` of the search (`goal content queries` for template goals, `goal text search` for free-text goals), the matching `items` and `moreAvailable`. Scopes `cd:goals:read`, `discovery:read:public`. Rate limit: 20 / minute.
+
+```text
+What's new on roadbeat for my goals since Monday? Two items per goal.
+```
+
+### `compass_match_content_to_goals`
+
+Given a `teaserId`, finds which of your active goals it serves and through which content query (index, content type, relevance). Free-text goals are skipped — they have no content queries. Rate limit: 20 / minute.
+
+### `compass_explain_match`
+
+Explains why a teaser matches one of your goals.
+
+<ParamField body="teaserId" param-type="string" required="true">The teaser.</ParamField>
+<ParamField body="goalId" param-type="string" required="true">Your goal id (from `cd_list_goals`).</ParamField>
+
+For every content query of the goal: whether it matched, and how the teaser's content type, tags, categories, primary category, topics, event type and article type compare with the query's filters. Clients that support MCP Apps show the answer as the interactive [why-card](/tools/why-card).
+
+### `compass_suggest_goals`
+
+Suggests goal templates from the same subcategories as your current goals that you have not adopted yet.
+
+<ParamField body="limit" param-type="integer">1–20, default 8.</ParamField>
+
+If you have no template-based goals yet, it says so and points to `cd_search_goal_templates`. Scopes `cd:goals:read`, `cd:read:public`.
+
+## Prompts and skills
+
+| Name | Kind | What it does |
+|------|------|--------------|
+| `compass_weekly_review` | prompt (core) | Weekly review: progress per goal, the most useful new items, one next step, optional new goals |
+| `compass_onboarding` | prompt (core) | Set up your first goals from templates, then show first matching content |
+| `compass-weekly-review` | skill | The same review as a multi-step skill for clients with Skills over MCP |
+| `compass-onboarding` | skill | The same onboarding as a skill |
+
+Both prompts take an optional `language` argument (`en` or `de`). Both workflows ask before adding or changing goals and treat teaser text as untrusted. See [Prompts & Skills](/tools/prompts-and-skills) and the guide [Your Weekly Compass Review](/help-center/guides/weekly-review).

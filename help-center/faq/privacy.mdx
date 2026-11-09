@@ -1,0 +1,48 @@
+---
+title: Privacy & Data
+description: Questions about what AI apps can see through the roadbeat MCP Gateway, what the gateway stores, and how to withdraw access again.
+---
+
+<Expandable title="What can an AI app see after I connect it?" default-open="true">
+Public roadbeat content right away. Your personal data (goals, follows, bookmarks) or your organization's Studio content only if you signed in with that account, granted the matching permission on the consent screen, **and** gave the gateway's consent the first time the app asked. See [Consent & Confirmations](/accounts/consent).
+</Expandable>
+
+<Expandable title="Does roadbeat send my data to AI companies?" default-open="false">
+The gateway sends tool results only to the app you connected. If that app is a hosted assistant, the result reaches its vendor — that is how these assistants work, and why the gateway asks for your consent before personal data is shared. The gateway itself sends no data or usage statistics to roadbeat e.V. or to any AI vendor.
+</Expandable>
+
+<Expandable title="Does the gateway store my goals or my content?" default-open="false">
+No. It reads them from the Context Directory or Studio when a tool runs. Exceptions: when an app uses an `idempotencyKey`, the result of that write is kept for 24 hours so a retry returns the same answer; and a data export is kept in memory for two minutes. See [Privacy & Your Data](/security/privacy#what-the-gateway-stores).
+</Expandable>
+
+<Expandable title="What is in the audit log?" default-open="false">
+Who called what, through which app, when, and with what result — with a hash instead of the call's arguments. It never contains tokens or the content of your data. It lives in your gateway operator's database and is deleted after 365 days by default. You can see your own entries with `gateway_export_my_data`.
+</Expandable>
+
+<Expandable title="How do I stop an app from accessing my data?" default-open="false">
+Open **Connected AI apps** in the roadbeat Web Client or **Profile › Connected AI apps** in Studio and select **Disconnect**. The app loses access to your personal and organization data immediately. In the Web Client, signing out of the browser session the app uses disconnects it too. See [Disconnect an app](/accounts/sign-in#disconnect-an-app).
+</Expandable>
+
+<Expandable title="Can I get a copy of my data?" default-open="false">
+Yes — ask your assistant to export your data. The `cd_export_data` tool returns a full GDPR export of what the Context Directory stores about you. It asks for your consent first, because the export leaves roadbeat. See [Export your data](/tools/personal-data#export-your-data).
+</Expandable>
+
+<Expandable title="Can I see what the gateway itself stores about me?" default-open="false">
+Yes — ask your assistant to run `gateway_export_my_data`. It shows your active consents and links a full JSON document with all your consents, consent and confirmation requests and your audit log. See [Gateway](/tools/gateway#gateway_export_my_data).
+</Expandable>
+
+<Expandable title="How do I withdraw the consents I gave?" default-open="false">
+Ask your assistant to run `gateway_revoke_my_consents` — for the app you are using, or with `allApps` for every app. The next personal or write action asks you again. To cut an app off completely, disconnect it instead.
+</Expandable>
+
+<Expandable title="Can my gateway records be deleted?" default-open="false">
+Yes. Ask your gateway operator to erase you: your consents, requests and stored results are deleted, and your audit records are re-assigned to a random pseudonym without personal details. Operators do this in the [admin UI](/self-hosting/admin-ui#answering-data-protection-requests), typically when your roadbeat account is deleted.
+</Expandable>
+
+<Expandable title="Can a malicious teaser make my assistant do something harmful?" default-open="false">
+Publisher texts are marked as untrusted so assistants know not to follow instructions in them. And even if an assistant were tricked, deleting or publishing needs your confirmation, and access to personal data needs your consent. See [Security Model](/security/security-model#untrusted-content).
+</Expandable>
+
+<Expandable title="Is the local Claude Desktop extension more private?" default-open="false">
+It keeps no database: audit entries and retries live in memory on your computer and vanish when it stops. It talks only to the roadbeat services you configured. Results still go to Claude, like with any connector.
+</Expandable>

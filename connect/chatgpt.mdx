@@ -1,0 +1,58 @@
+---
+title: ChatGPT
+description: Use the roadbeat MCP Gateway in ChatGPT as a developer-mode connector, with search and fetch for knowledge retrieval and OAuth sign-in.
+---
+
+ChatGPT connects to MCP servers through **connectors**. The roadbeat core endpoint `/mcp` implements the `search` + `fetch` pair that ChatGPT uses for knowledge retrieval and deep research, plus a profile tool so you can tell connected accounts apart.
+
+<Callout kind="alert">
+  ChatGPT calls the gateway from OpenAI's servers. The gateway needs a **stable, public HTTPS URL** — `localhost` and private networks cannot be reached.
+</Callout>
+
+<Callout kind="tip">
+  **Personal roadbeat account?** Open **Connected AI apps** in the roadbeat Web Client: if your provider has set up a gateway, the **Connect an AI assistant** card shows the connector URL to copy and these steps.
+</Callout>
+
+## Add the connector
+
+<Steps>
+  <Step title="Enable developer mode">
+    In ChatGPT, open **Settings › Apps & Connectors › Advanced settings** and turn on **Developer mode**. Workspace plans may require an admin to allow custom connectors first.
+  </Step>
+  <Step title="Create the connector">
+    Choose **Create** (or **Add connector**) and enter:
+
+    - **Name:** `roadbeat`
+    - **MCP server URL:** `https://mcp.example.com/mcp`
+    - **Authentication:** OAuth
+  </Step>
+  <Step title="Provide OAuth client details if asked">
+    ChatGPT discovers the roadbeat sign-in automatically. roadbeat does not allow apps to register themselves on the fly (dynamic client registration is off by default), so if ChatGPT asks for OAuth client details, ask your roadbeat operator for a **pre-registered client**. You only need its **client ID** — roadbeat's pre-registered clients are public clients protected by PKCE, so leave the client secret empty. The operator needs the callback URL ChatGPT shows in the connector form. See [Authorization Servers](/self-hosting/authorization-servers#pre-register-clients).
+  </Step>
+  <Step title="Sign in">
+    Save the connector and sign in when ChatGPT opens the roadbeat window. Review the permissions and select **Allow**.
+  </Step>
+  <Step title="Use it in a chat">
+    Start a new chat, open the tools menu and select the **roadbeat** connector (developer-mode connectors are chosen per chat). Then ask, for example: *"Search roadbeat for job offers in renewable energy in Austria."*
+  </Step>
+</Steps>
+
+## What ChatGPT sees
+
+| Tool | Purpose |
+|------|---------|
+| `search` | Query → up to 10 results with `id`, `title`, citable `url` and a short text |
+| `fetch` | `id` from `search` → the full teaser: title, text, URL and metadata |
+| `gateway_whoami` | The connected roadbeat account, client and permissions (marked as the profile tool) |
+| `discovery_search`, `discovery_search_by_goal`, `discovery_suggest`, `cd_search_goal_templates`, `schema_list_types` | Richer, filterable discovery |
+| `cd_list_goals`, `cd_list_bookmarks`, `compass_review_today` | Your goals and bookmarks — personal accounts only |
+
+All read tools carry truthful `readOnlyHint` annotations. Write tools are not part of the core endpoint; to use them, connect `/mcp/all` or a single server such as `/mcp/goals` — as long as ChatGPT supports the size of that tool list.
+
+## Consent and confirmations
+
+The first time ChatGPT reads your goals, the gateway asks for your consent. When ChatGPT cannot show the request itself, the tool answer contains a link to roadbeat's approval page — open it, choose **Allow**, and ask ChatGPT to try again. See [Consent & Confirmations](/accounts/consent).
+
+<Callout kind="info">
+  ChatGPT's connector settings change frequently. If menu names differ, follow OpenAI's documentation for [connecting MCP servers to ChatGPT](https://developers.openai.com/plugins/build/mcp-server).
+</Callout>

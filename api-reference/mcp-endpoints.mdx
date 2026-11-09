@@ -1,0 +1,99 @@
+---
+title: MCP Endpoints
+description: Protocol reference for the MCP endpoints — Streamable HTTP views, headers, protocol versions, authorization discovery and errors.
+---
+
+These endpoints speak the [Model Context Protocol](https://modelcontextprotocol.io), not REST. MCP client libraries handle the details; this page is for client developers, operators and anyone debugging a connection.
+
+## Endpoints
+
+| Method and path | Purpose |
+|-----------------|---------|
+| `POST /mcp` | Core catalog |
+| `POST /mcp/all` | Everything the caller may use |
+| `POST /mcp/{server}` | One logical server: `discovery`, `schema`, `cd`, `goals`, `studio`, `pod`, `augmentor` (unknown names → `404`) |
+| `GET /.well-known/oauth-protected-resource` | Protected Resource Metadata (RFC 9728) for `/mcp` |
+| `GET /.well-known/oauth-protected-resource/mcp` | Same, path-suffixed form |
+| `GET /.well-known/oauth-protected-resource/mcp/{server}` | Metadata for one view (`/mcp/all` included) |
+| `GET /approve/{id}?sig=…` | Approval page (HTML) for consent requests and confirmations |
+| `POST /approve/{id}` | Decision on the approval page (form post with CSRF token) |
+
+The stdio sidecar offers the same catalog over standard input/output; there is no HTTP route for it.
+
+## Transport
+
+- **Streamable HTTP**, one JSON-RPC message per `POST`. The response is JSON or a request-scoped `text/event-stream`.
+- **Protocol versions:** `2026-07-28` (stateless; `server/discover` supported) and `2025-11-25` (served statelessly on the same paths, no `Mcp-Session-Id`; disable with `MCP_LEGACY_STATELESS=false`). Unsupported versions get JSON-RPC error `-32022` with the supported list.
+- `GET` and `DELETE` on `/mcp*` return `405` — there are no server-initiated streams or sessions.
+- Maximum request body: 4 MiB (configurable).
+
+### Request headers
+
+| Header | Value |
+|--------|-------|
+| `Authorization` | `Bearer <access token>` (unless the operator allows anonymous access) |
+| `Content-Type` | `application/json` |
+| `Accept` | `application/json, text/event-stream` |
+| `MCP-Protocol-Version` | e.g. `2026-07-28` |
+| `Mcp-Method` | The JSON-RPC method, e.g. `tools/call` |
+| `Mcp-Name` | Tool, resource URI or prompt name for `tools/call`, `resources/read`, `prompts/get` |
+
+`Mcp-Method` and `Mcp-Name` must match the body; a mismatch is rejected with JSON-RPC error `-32020` (header mismatch). Reverse proxies can use these headers to route or rate-limit before the body is parsed.
+
+### Browser access and CORS
+
+Requests carrying an `Origin` header are only accepted from hosts in `MCP_ALLOWED_ORIGINS` (default: `localhost`, `127.0.0.1`, `[::1]` and the gateway's own host); others get `403`. Allowed origins receive CORS headers for `GET, POST, DELETE, OPTIONS`, may send `authorization`, `content-type`, `accept`, `mcp-protocol-version`, `mcp-method`, `mcp-name`, `mcp-session-id` and `last-event-id`, and can read `www-authenticate`, `mcp-session-id` and `mcp-protocol-version`.
+
+## Authorization discovery
+
+```bash
+curl -si -X POST https://mcp.example.com/mcp -H 'content-type: application/json' -d '{}'
+```
+
+```text
+HTTP/1.1 401 Unauthorized
+www-authenticate: Bearer error="invalid_token", error_description="Missing Authorization header",
+  scope="discovery:read schema:read cd:read:public",
+  resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp"
+```
+
+The metadata document names the authorization servers:
+
+```json
+{
+  "resource": "https://mcp.example.com/mcp",
+  "authorization_servers": ["https://app.example.com"],
+  "scopes_supported": ["discovery:read", "schema:read", "cd:read:public"],
+  "bearer_methods_supported": ["header"],
+  "resource_name": "roadbeat MCP Gateway",
+  "resource_documentation": "https://docs.roadbeat.net/mcp-gateway"
+}
+```
+
+- Request tokens with `resource` = the endpoint URL. By default a token for `/mcp` is also accepted on `/mcp/all` and `/mcp/{server}`; operators can require per-view tokens (`AUTH_ACCEPT_ROOT_AUDIENCE=false`).
+- `scopes_supported` deliberately lists only the read baseline. Further scopes are requested by **step-up**: a call that needs more answers `403` with `WWW-Authenticate: Bearer error="insufficient_scope", scope="<every scope the call needs>"`.
+- Invalid tokens answer `401` with an `error_description`: expired, wrong audience, not an access token (`typ`), untrusted issuer, bad signature or algorithm.
+
+## Server capabilities
+
+`server/discover` (modern) or `initialize` (legacy) report:
+
+- **Server info:** name `roadbeat-mcp-gateway`, title `roadbeat (<view>)`, the gateway version.
+- **Capabilities:** tools, resources and prompts (with `listChanged`), the MCP Apps extension `io.modelcontextprotocol/ui`, and on most views the Skills extension `io.modelcontextprotocol/skills`.
+- **Instructions:** a short description of roadbeat for the model, including the rule that publisher and user text is untrusted data and that consent and confirmation requests must be relayed to the user.
+- **Cache hints:** `tools/list`, `prompts/list` and `resources/templates/list` — 1 hour, `private`; `resources/list` — 5 minutes, `private`; `server/discover` — 1 hour, `public`. Lists are sorted by name.
+
+## Results and errors
+
+| Situation | What the client gets |
+|-----------|----------------------|
+| Success | `structuredContent` plus a text block; `_meta["net.roadbeat/untrusted"]: true` when the result contains publisher or user text |
+| Expected failure (not found, invalid input, upstream unavailable, rate limit, missing consent) | Tool result with `isError: true` and an actionable sentence |
+| Consent or confirmation needed, client supports elicitation | `resultType: "input_required"` with a form (confirm) or URL (approval page) elicitation and a signed `requestState`; retry the same request with `inputResponses` |
+| Consent or confirmation needed, no elicitation support | Tool result with `isError: true` that contains the approval link |
+| Unknown resource | JSON-RPC error `-32602` |
+| Missing scope | HTTP `403 insufficient_scope` (see above) |
+
+## Approval page
+
+`GET /approve/{id}?sig=…` shows a consent request or confirmation: the summary, the OAuth client, the tool that asked, and the expiry time. Only a `POST` with the page's CSRF token decides it; consent requests also choose a lifetime (`once`, `day`, `days30`, `permanent`). Links are HMAC-signed, expire after `APPROVAL_TTL_SEC` (default 600 seconds), are sent with `Cache-Control: no-store`, and cannot be embedded in frames. Decided requests answer `410`.

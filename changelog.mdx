@@ -1,0 +1,85 @@
+---
+title: Changelog
+description: Release notes of the roadbeat MCP Gateway — new tools and endpoints, sign-in and security changes, and known limitations.
+---
+
+<Update label="2026-11-09" description="v0.1.0 update — Admin UI, data rights, retention, Studio translation, media, locales" tags={["feature", "security"]}>
+## Admin UI, GDPR self-service, retention and more Studio tools
+
+**Admin UI at `/admin`**
+
+- A web interface for platform administrators: overview, AI clients, audit log (filters, JSON / CSV export), consents (revoke one or all), confirmations, catalog (enable / disable) and data requests. All 24 official EU languages, light and dark.
+- Sign-in with OAuth 2.1 + PKCE at the Studio authorization server, scope `mcp:admin` (platform super admins only). On HTTPS gateways the UI identifies itself with a metadata document the gateway serves — nothing to register. See [Admin UI](/self-hosting/admin-ui).
+
+**Data protection**
+
+- Self-service tools in the core set: `gateway_export_my_data` (everything the gateway stores about you, consent class `pii_egress`, full document at `gateway://me/export`) and `gateway_revoke_my_consents` (this app or all apps). See [Gateway](/tools/gateway).
+- Admin endpoints `GET /api/v1/admin/principals/{principalId}/export` and `POST /api/v1/admin/principals/{principalId}/erase`: erasure deletes consents, requests, stored results and tasks and pseudonymizes audit records.
+- Disconnecting an app under **Connected AI apps** now ends its access to personal and Studio data **immediately**: Studio and the Web Client check the connection on every request.
+
+**Retention**
+
+- An hourly job deletes expired stored write results, consent and confirmation requests 30 days after they expired and audit records after 365 days (`AUDIT_RETENTION_DAYS`, `CONFIRMATION_RETENTION_DAYS`, `RETENTION_INTERVAL_MIN`). See [Operations](/self-hosting/operations#data-retention).
+
+**Studio**
+
+- `studio_get_publish_status` — where an item's teaser is on each Discovery Node, with errors.
+- `studio_distribute_to_discovery` — re-send a published item's teaser to the nodes.
+- `studio_get_translation_status` — how complete each locale of an item is, plus its translation task status.
+- `studio_translate_content` — fill a locale with the organization's configured machine-translation provider (its data-processing consent in Studio applies); only empty values unless `overwrite`, `dryRun` for a preview, otherwise saved as a new, restorable version with a change note; refused with nothing changed when the organization has no provider configured. Needs a Studio version that opens translation to AI apps.
+- Media library: `studio_find_assets`, `studio_upload_asset` (base64 up to 2 MB; images, PDF, audio, text / CSV; no SVG; identical files reused) and `studio_update_asset` for alt text, title and description, plus the resource `studio://assets/{id}`. Give images alt text — Studio warns when publishing images without it.
+- Locales: `studio_list_locales`, `studio_list_locale_variants` and `studio_create_locale_variant` (a separate draft per locale with the slug `<source>-<locale>`, fields copied as a starting point).
+- `studio://` resources: content types and their schemas, content by id or slug, and version history with single snapshots (Studio CE keeps the latest ten).
+- Every Studio tool, including the typed `studio_create_<type>` tools, declares an output schema.
+- The Studio consent screen describes `mcp:admin` as *Administer the roadbeat MCP Gateway: audit log, consents of all users, tool catalog*.
+
+**Prompts and onboarding**
+
+- All four prompts take an optional `language` argument: `en` (default) or `de`.
+- The Web Client's **Connected AI apps** page can show a **Connect an AI assistant** card with the connector URL and setup steps (`MCP_GATEWAY_URL`, `MCP_GATEWAY_MCPB_URL`). See [Authorization Servers](/self-hosting/authorization-servers#the-connect-an-ai-assistant-card-web-client).
+</Update>
+
+<Update label="2026-11-09" description="v0.1.0 — First release" tags={["feature", "security"]}>
+## The roadbeat MCP Gateway
+
+The first release of the governed MCP entry point to roadbeat: AI assistants such as Claude, Claude Code, ChatGPT and Cursor can now discover roadbeat content, work with your goals and draft Studio content — signed in, with consent, confirmations and an audit log.
+
+**Protocol and endpoints**
+
+- MCP `2026-07-28` (stateless) over Streamable HTTP and stdio; `2025-11-25` clients are served on the same endpoints without sessions.
+- Three kinds of endpoints: the compact core set at `/mcp`, everything at `/mcp/all`, and one server at `/mcp/{server}` — see [Catalog Overview](/tools/overview).
+- Tool lists are deterministic and carry cache hints; every result has structured content plus text.
+
+**Sign-in and permissions**
+
+- The gateway is an OAuth 2.1 resource server: Protected Resource Metadata, audience-bound RFC 9068 access tokens, step-up with `insufficient_scope`.
+- roadbeat **Studio** (organization accounts) and the roadbeat **Web Client** (personal accounts) act as authorization servers, with a consent screen, **Connected AI apps** pages, Client ID Metadata Documents and pre-registered clients.
+- No token passthrough: personal and Studio data is reached through RFC 8693 token exchange with five-minute, narrowed tokens. See [Security Model](/security/security-model).
+- Consent ledger per account, app and consent class with four lifetimes; confirmations for deleting and publishing via dialogs (MRTR elicitation) or a signed approval page; `idempotencyKey` on every write tool; per-account and per-tool rate limits.
+
+**Tools, resources, prompts and skills**
+
+- 43 tools: `search` / `fetch`, Discovery (faceted and goal-driven search, similar content, autocomplete, explanations), Schema Registry (types, schemas, validation), goal catalog, your goals, follows, bookmarks and collections, GDPR data export (`cd_export_data`), Compass, Studio (list, read, validate, draft, update, publish, unpublish) and `gateway_whoami`.
+- Typed `studio_create_<type>` tools for your organization's most used content types on `/mcp/studio`.
+- 25 resources (`discovery://`, `schema://`, `cd://`, `gateway://`), 4 prompts and 3 skills via Skills over MCP (beta).
+- The interactive "why am I seeing this?" card for MCP Apps clients (beta) — see [the card](/tools/why-card).
+
+**Privacy and security**
+
+- Teasers are stripped of signatures, indexing metadata, vectors and publisher contact data; publisher and user text is marked untrusted.
+- Append-only audit log with hashes instead of arguments; Origin validation; signed, user-bound request state for confirmations.
+
+**Operations**
+
+- Docker image (Node 22), PostgreSQL store, optional Redis, health and readiness probes, Prometheus metrics, OpenTelemetry spans.
+- Admin and Integration Hub REST API — see the [API Reference](/api-reference/overview).
+- Claude Desktop extension (`.mcpb`, unsigned) and a local stdio sidecar with `login`.
+
+**Known limitations**
+
+- Connecting Claude, ChatGPT and Cursor through OAuth discovery was verified with the MCP SDK client and a browser against real Studio and Web Client instances; verification in the hosted assistants follows with the first public HTTPS deployment.
+- The approval page relies on its signed link and does not yet ask you to sign in again.
+- Not yet available: Content Pod and Augmentor tools, Pro workflow tools, service accounts (OAuth Client Credentials), a signed `.mcpb` bundle and MCP Registry listing. (The admin UI, automatic retention, re-distribution to Discovery Nodes, machine translation, `studio://` resources, the media library and locale variants followed in the update above.)
+- Clients using MCP `2025-11-25` over HTTP cannot show confirmation dialogs; they receive approval links.
+- Skills and approval pages are in English (prompts gained German in the update above).
+</Update>

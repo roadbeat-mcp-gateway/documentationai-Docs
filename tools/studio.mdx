@@ -1,0 +1,234 @@
+---
+title: Studio
+description: Read, draft, validate and publish your organization's content in roadbeat Studio — including typed studio_create_<type> tools per content type.
+---
+
+The Studio tools let an assistant work in **your organization's** roadbeat Studio: find and read content, create schema-valid drafts, and publish after you confirm. They are available only when you sign in with your **Studio account** over HTTP (not in the local sidecar).
+
+Endpoint: `/mcp/studio` (all Studio tools including the typed ones) and `/mcp/all` (generic tools only). No Studio tool is part of the core set.
+
+<Callout kind="info">
+  **Studio stays in charge.** The gateway exchanges your app's token for a five-minute Studio token that names the gateway as the acting party. Studio then checks your role and the granted scopes again, and accepts such tokens only on its content, content-type, publishing, translation, locale and media library endpoints (and to look up who you are). Everything else — including sign-in, connected apps, OAuth client settings and the translation provider settings — refuses them.
+</Callout>
+
+## Permissions
+
+| Tool group | Scope | Studio role | Consent class |
+|------------|-------|-------------|---------------|
+| Reading content, content types, locales, variants, media, publish and translation status, `studio://` resources | `studio:read` | Viewer and up | `read_org` — no extra consent |
+| Validating, creating and editing drafts | `studio:write` | Editor and up | `write_org` — consent on first write (validation needs no consent) |
+| Publishing and unpublishing | `studio:publish` | Editor and up | `write_org` — plus **confirmation every time** |
+| Re-sending a published item to the Discovery Nodes | `studio:publish` | Editor and up | `write_org` — consent on first use |
+| Machine-translating an item, creating locale variants | `studio:write` | Editor and up | `write_org` — consent on first use |
+| Uploading media, editing alt text and metadata | `studio:write` | Editor and up | `write_org` — consent on first use |
+
+Every Studio tool declares an **output schema**, so clients can rely on the exact shape of `structuredContent` — including the typed `studio_create_<type>` tools.
+
+## Reading
+
+### `studio_list_content`
+
+Content items of your organization (drafts and published), newest first: `id`, `title`, `slug`, `status`, `locale`, `version`, `contentType`, `updatedAt`, `publishedAt`, plus `total`, `page`, `totalPages`.
+
+<ParamField body="search" param-type="string">Full-text search in titles and content.</ParamField>
+<ParamField body="status" param-type="string">`draft`, `published`, `unpublished` or `archived`.</ParamField>
+<ParamField body="locale" param-type="string">e.g. `de` or `en`.</ParamField>
+<ParamField body="page" param-type="integer">1–100.</ParamField>
+<ParamField body="limit" param-type="integer">1–50, default 20.</ParamField>
+
+### `studio_get_content`
+
+One content item by `id` (UUID), including its schema-driven fields in `data`.
+
+### `studio_list_content_types`
+
+The content types enabled in your organization: `id`, `name` and number of `items`.
+
+### `studio_get_content_type`
+
+The JSON Schema of one content type (`contentTypeId`), with shared definitions inlined — the exact shape `data` must have for drafts. Fields Studio fills in itself (such as `identifier`) are optional.
+
+## Drafting
+
+### `studio_create_draft`
+
+Creates a content item as a **draft**. Nothing is published.
+
+<ParamField body="contentTypeId" param-type="string" required="true">Content type id from `studio_list_content_types`.</ParamField>
+<ParamField body="data" param-type="object" required="true">The fields, as defined by the content type schema. Localized fields are objects keyed by locale, e.g. `{"en": "…", "de": "…"}`.</ParamField>
+<ParamField body="slug" param-type="string">URL slug (lowercase, hyphens); generated from the title when omitted.</ParamField>
+<ParamField body="locale" param-type="string">Content locale (default `en`).</ParamField>
+<ParamField body="idempotencyKey" param-type="string">UUID for safe retries.</ParamField>
+
+The answer contains the new item's summary and — if the draft does not satisfy the schema yet — `validationErrors` with the problems that block publishing. Studio may save incomplete drafts; fix them with `studio_update_draft` before publishing. If Studio rejects the content outright, the error lists Studio's validation messages. Rate limit: 30 / minute.
+
+### `studio_update_draft`
+
+Replaces the fields and/or slug of a content item; Studio keeps a version snapshot.
+
+<ParamField body="id" param-type="string" required="true">Content id.</ParamField>
+<ParamField body="data" param-type="object">The **complete** new `data` — read the item with `studio_get_content` first.</ParamField>
+<ParamField body="slug" param-type="string">New slug.</ParamField>
+<ParamField body="expectedVersion" param-type="integer">Fail instead of overwriting when someone saved a newer version in the meantime.</ParamField>
+<ParamField body="changeNote" param-type="string">Note for the version history (up to 500 characters).</ParamField>
+<ParamField body="idempotencyKey" param-type="string">UUID for safe retries.</ParamField>
+
+Rate limit: 30 / minute.
+
+### `studio_validate_content`
+
+Dry run: checks `data` against a content type (`contentTypeId`) without saving and returns `valid` and up to 50 `errors`.
+
+## Locales and localization
+
+roadbeat Studio supports two ways of offering content in several languages. Which one your organization uses depends on its content types and workflow:
+
+| Model | How it works | Tools |
+|-------|--------------|-------|
+| **Localized fields** | One item; each translatable field holds a value per locale (`{"en": "…", "de": "…"}`) | `studio_get_translation_status`, `studio_translate_content`, `studio_update_draft` |
+| **Locale variants** | A separate item per locale, with its own slug, status and history | `studio_list_locale_variants`, `studio_create_locale_variant`, then `studio_update_draft` |
+
+### `studio_list_locales`
+
+The locales enabled in your organization: `code`, `name`, `nativeName`, `isDefault`, text `direction` and `fallbackLocale`. These are the valid targets for `studio_translate_content` and `studio_create_locale_variant`. Scope `studio:read`.
+
+### `studio_list_locale_variants`
+
+The locale variants of a content item (`id`): `id`, `locale`, `slug`, `status` and `updatedAt` of each. Items that use localized fields instead have no variants — use `studio_get_translation_status` for them. Scope `studio:read`.
+
+### `studio_create_locale_variant`
+
+Creates a separate **draft** of a content item for another locale. Studio copies the source item's fields as a starting point and gives the variant the slug `<source-slug>-<locale>`. Nothing is published.
+
+<ParamField body="id" param-type="string" required="true">Source content id.</ParamField>
+<ParamField body="locale" param-type="string" required="true">Target locale — must be enabled (`studio_list_locales`).</ParamField>
+<ParamField body="idempotencyKey" param-type="string">UUID for safe retries.</ParamField>
+
+The copied fields are still in the source language: let the assistant rewrite them in the target language with `studio_update_draft`, then review and publish the variant like any other item. Needs `studio:write` (Editor and up), consent class `write_org`. Rate limit: 20 / minute.
+
+## Translating
+
+### `studio_get_translation_status`
+
+How complete each of your organization's locales is for one content item. Pass the content `id`; the answer has the item's `sourceLocale` and, per locale: `locale`, `name`, `isDefault`, the number of localized fields that are `filled` out of `total`, the `percentage`, and the `taskStatus` of the locale's translation task, if one exists. Use it before translating. Scope `studio:read`.
+
+### `studio_translate_content`
+
+Fills a target locale of a content item with **machine translations** from the translation provider your organization configured in Studio.
+
+<ParamField body="id" param-type="string" required="true">Content id.</ParamField>
+<ParamField body="targetLocale" param-type="string" required="true">Locale to fill, e.g. `de` or `fr`.</ParamField>
+<ParamField body="sourceLocale" param-type="string">Locale to translate from (default: the item's source locale).</ParamField>
+<ParamField body="fields" param-type="array">Only these field ids (default: every localized field, up to 100).</ParamField>
+<ParamField body="overwrite" param-type="boolean">Replace existing values in the target locale (default `false` — only empty values are filled).</ParamField>
+<ParamField body="dryRun" param-type="boolean">Return the translations as a `preview` without saving.</ParamField>
+<ParamField body="idempotencyKey" param-type="string">UUID for safe retries.</ParamField>
+
+- **How it is saved.** Without `dryRun`, the result is written through Studio's normal content update — with the version you started from (`expectedVersion`) and the change note *Machine translation to &lt;locale&gt; (AI assistant via MCP Gateway)*. It becomes a new **version** you can restore in Studio, passes the usual schema checks and triggers the usual update events. If someone changed the item in the meantime, nothing is overwritten and the call fails with a version conflict.
+- **What you get back:** `saved`, the new `version`, the `translated` fields, `skipped` fields (with the reason, e.g. a value already exists or the field is marked do-not-translate), `failed` fields with the error, and remaining `validationErrors`. When nothing could be translated, nothing is saved.
+- **Your organization's rules apply.** The text goes to the provider configured in Studio (for example DeepL, Mistral or LibreTranslate), so Studio's data-processing consent for that provider must have been accepted by an organization admin. The gateway never calls a translation service itself.
+- Needs `studio:write` (Editor and up) and the consent class `write_org` (consent on first use, no per-call confirmation). Annotated as reaching the outside world. Rate limit: 10 / minute.
+
+<Callout kind="tip">
+  Machine translations are drafts too: run with `dryRun` first, review the result, and have a person check the text before you publish. If your organization has no provider configured, the tool refuses with nothing changed.
+</Callout>
+
+## Media library
+
+### `studio_find_assets`
+
+Searches your organization's media library — for example to reference an existing image in a draft. Returns `id`, `filename`, `mimeType`, `sizeBytes`, `url`, `width` / `height`, `title`, `description`, `alt`, `tags` and `createdAt`, paged.
+
+<ParamField body="search" param-type="string">Text in file name, title or description.</ParamField>
+<ParamField body="mimeType" param-type="string">MIME type prefix, e.g. `image/` or `application/pdf`.</ParamField>
+<ParamField body="page / limit" param-type="integer">Page 1–100, 1–50 items per page (default 20).</ParamField>
+
+Scope `studio:read`.
+
+### `studio_upload_asset`
+
+Uploads a file to the media library and returns the asset (with `id` and `url` to reference in a draft).
+
+<ParamField body="data" param-type="string" required="true">The file content, base64-encoded — at most **2 MB**.</ParamField>
+<ParamField body="filename" param-type="string" required="true">A plain file name without a path, e.g. `buergerfest-2027.jpg`.</ParamField>
+<ParamField body="mimeType" param-type="string" required="true">`image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/avif`, `application/pdf`, `audio/mpeg`, `audio/ogg`, `audio/wav`, `text/plain` or `text/csv`. SVG and other types are refused.</ParamField>
+<ParamField body="alt" param-type="string">Alt text for images (up to 500 characters).</ParamField>
+<ParamField body="title / description" param-type="string">Optional metadata.</ParamField>
+<ParamField body="folderId" param-type="string">Media library folder.</ParamField>
+<ParamField body="idempotencyKey" param-type="string">UUID for safe retries.</ParamField>
+
+If an identical file already exists, Studio reuses it and the answer says `deduplicated: true`. Needs `studio:write`, consent class `write_org`. Rate limit: 10 / minute.
+
+<Callout kind="alert">
+  **Always give images a meaningful alt text.** It is what screen-reader users get instead of the picture, and Studio warns when you publish content with images that have none. Describe what the image shows and why it matters in context — not "image" or the file name.
+</Callout>
+
+### `studio_update_asset`
+
+Sets the `alt` text, `title` or `description` of an existing asset (`id`); fields you omit stay as they are. Useful to add missing alt text to images found with `studio_find_assets`. Needs `studio:write`, consent class `write_org`. Rate limit: 30 / minute.
+
+## Publishing
+
+### `studio_publish_content` / `studio_unpublish_content`
+
+Publishing makes an item public and sends its teaser to the Discovery Nodes; unpublishing takes it offline and withdraws the teasers. Both take `id` and an optional `idempotencyKey`, need `studio:publish`, and **ask you to confirm every time**:
+
+> *Publish "Bürgerfest 2027" in roadbeat Studio (it becomes public and is sent to the Discovery Nodes)?*
+
+They are annotated as reaching the outside world (`openWorldHint`). Rate limit: 10 / minute.
+
+### `studio_get_publish_status`
+
+Where a content item's teaser is on the Discovery Nodes. Pass the content `id`; the answer lists one entry per node the item was ever sent to:
+
+<ResponseField name="nodes[].status" field-type="string" required="true">`published`, `unpublished` or `failed`.</ResponseField>
+<ResponseField name="nodes[].nodeId / nodeName" field-type="string">The Discovery Node.</ResponseField>
+<ResponseField name="nodes[].teaserId" field-type="string">The teaser id on that node.</ResponseField>
+<ResponseField name="nodes[].publishedAt / unpublishedAt" field-type="string">Timestamps.</ResponseField>
+<ResponseField name="nodes[].error" field-type="string">The last error, for failed deliveries.</ResponseField>
+<ResponseField name="nodes[].nodeEnabled / nodeFailing" field-type="boolean">Whether the node is enabled, and whether Studio has stopped sending to it for now because it keeps failing.</ResponseField>
+
+Use it after publishing, or when a teaser does not show up in search. Scope `studio:read`.
+
+### `studio_distribute_to_discovery`
+
+Sends the teaser of an **already published** item to every Discovery Node that accepts its content type **again** — for example after a node failed, or after the item changed. Publishing does this automatically; drafts cannot be distributed (publish them first).
+
+<ParamField body="id" param-type="string" required="true">Content id.</ParamField>
+<ParamField body="idempotencyKey" param-type="string">UUID for safe retries.</ParamField>
+
+The answer lists the outcome per node — `success`, `failed` (with the error) or `skipped` (the node keeps failing, so Studio sent nothing this time) — plus a `summary` with the counts. It needs `studio:publish`, uses the consent class `write_org` (consent on first use, no per-call confirmation) and is annotated as reaching the outside world. Rate limit: 10 / minute.
+
+<Callout kind="tip">
+  If a write times out, the gateway tells you that the change **may** still have been saved. Check with `studio_list_content` or `studio_get_content`, or repeat the call with the same `idempotencyKey` — never just call again with a new key.
+</Callout>
+
+## Typed tools: `studio_create_<type>`
+
+On `/mcp/studio`, the gateway adds one **typed** draft tool per content type — for example `studio_create_news` or `studio_create_event`. Its input schema *is* the content type's JSON Schema (with the referenced shared definitions inlined), so the assistant sees every field, type and constraint without reading a schema first.
+
+- Arguments are validated against the schema **before** anything is sent to Studio, so the assistant gets precise errors early.
+- Inputs: `data` (the typed fields), plus optional `slug`, `locale` and `idempotencyKey`. Same scope, consent and rate limit as `studio_create_draft`.
+- Tool names are derived from the content type id: lowercase, other characters replaced by `_`, at most 64 characters.
+
+<Callout kind="info">
+  **Why only some types?** A content type schema is about 40 KB, and every tool is sent to the assistant with each tool list. The gateway therefore generates typed tools only for your organization's **12 most used content types** (by number of items; operators can change this with `STUDIO_TYPED_TOOLS_MAX`, `0` turns them off). The list is built per organization and refreshed every five minutes. Every other type is still available through `studio_create_draft` + `studio_get_content_type`. There are no typed *update* tools — use `studio_update_draft`.
+</Callout>
+
+## Resources
+
+The same data as the read tools, addressable by URI so an app can attach it as context. Studio sign-ins only, scope `studio:read`, consent class `read_org`, never cached. Content is publisher data and marked untrusted. Served on `/mcp/studio` and `/mcp/all`.
+
+| URI | Content |
+|-----|---------|
+| `studio://content-types` | The content types enabled in your organization (id, name, number of items) |
+| `studio://content-types/{typeId}` | The JSON Schema of one content type with shared definitions inlined — the shape of a draft's `data` |
+| `studio://content/{id}` | One content item with its fields (`data`) |
+| `studio://content/by-slug/{contentType}/{slug}` | One content item looked up by content type and slug |
+| `studio://versions/{contentId}` | The retained version history, newest first: version number, change note, date. Studio CE keeps the latest ten versions |
+| `studio://versions/{contentId}/{version}` | The fields (`data`) of one version snapshot |
+| `studio://assets/{id}` | One media library asset: URL, type, size, dimensions, alt text, title |
+
+## Not available yet
+
+Distribution to a selected subset of Discovery Nodes, changing the organization's locale settings, deleting assets, Studio prompts and the Pro editorial workflow tools (review, approval, version comparison) are planned for later releases.

@@ -1,0 +1,48 @@
+---
+title: General Questions
+description: Frequently asked questions about the roadbeat MCP Gateway — what it is, which assistants work, accounts, costs and what is coming next.
+---
+
+<Expandable title="What is the roadbeat MCP Gateway?" default-open="true">
+A server that connects AI assistants to roadbeat through the Model Context Protocol (MCP). Your assistant can search roadbeat content, look up content types, work with your goals, follows and bookmarks, and draft content in Studio — with sign-in, consent, confirmations and an audit log in between. See the [Introduction](/introduction).
+</Expandable>
+
+<Expandable title="Does the gateway use AI itself?" default-open="false">
+No. The gateway never calls an AI model. All the thinking happens in the assistant you connect; the gateway only provides roadbeat data and actions under your control.
+</Expandable>
+
+<Expandable title="Which assistants work with it?" default-open="false">
+Any MCP client that supports Streamable HTTP with OAuth, or local stdio servers. We document [Claude](/connect/claude), [Claude Code](/connect/claude-code), [ChatGPT](/connect/chatgpt), [Cursor](/connect/cursor), the [Claude Desktop extension](/connect/claude-desktop-extension) and the [MCP Inspector](/connect/mcp-inspector). Hosted assistants (Claude on the web, ChatGPT) need a gateway on the public internet.
+</Expandable>
+
+<Expandable title="Where do I get the gateway URL?" default-open="false">
+From whoever runs roadbeat for you — your organization's Studio operator, or the provider of your roadbeat account. If you run your own Studio or Web Client, you can [host the gateway yourself](/self-hosting/overview). A public gateway operated by roadbeat e.V. for personal accounts is planned for version 1.0.
+</Expandable>
+
+<Expandable title="Personal or Studio account — which one do I sign in with?" default-open="false">
+The account that owns the data you want to work with. Your personal account (Web Client) unlocks your goals, follows, bookmarks and Compass; your Studio account unlocks your organization's content. Public search works with both. See [Accounts & Sign-in](/accounts/sign-in).
+</Expandable>
+
+<Expandable title="Why does my assistant only see a few tools?" default-open="false">
+The default endpoint `/mcp` serves a compact **core** set (at most 20 tools) because many assistants struggle with long tool lists. Use `/mcp/all` in clients with tool search (Claude Code), or a single server such as `/mcp/studio`. Tools you cannot use with your account are hidden too. See [Catalog Overview](/tools/overview).
+</Expandable>
+
+<Expandable title="Can the assistant publish or delete things without asking me?" default-open="false">
+No. Deleting goals or bookmarks and publishing or unpublishing Studio content always need your confirmation — in a dialog or on an approval page. The gateway enforces this itself, even for assistants that run tools automatically. See [Consent & Confirmations](/accounts/consent).
+</Expandable>
+
+<Expandable title="Is there an admin interface for operators?" default-open="false">
+Yes. Every gateway serves an admin UI at `/admin` for platform administrators: connected AI clients, the audit log with export, consents, confirmations, the tool catalog and data-protection requests. See [Admin UI](/self-hosting/admin-ui).
+</Expandable>
+
+<Expandable title="What does it cost?" default-open="false">
+The gateway is open source under AGPL-3.0 and part of roadbeat's Community Edition. Whether a hosted gateway is included in your roadbeat plan depends on your provider. Your AI assistant's own subscription is separate.
+</Expandable>
+
+<Expandable title="Which languages are supported?" default-open="false">
+Tool descriptions and skills are in English, which works with every major assistant — the assistant answers you in your language. Prompts come in English and German (`language` argument). Content is searched in German and English, and you can pass a `locale` for titles and labels. The admin UI is available in all 24 official EU languages; approval pages are in English in release 0.1.0.
+</Expandable>
+
+<Expandable title="What is not available yet?" default-open="false">
+Release 0.1.0 does not include: Content Pod and Augmentor tools, Pro workflow tools, machine-to-machine (service) access, a signed Claude Desktop extension, and a public listing in the MCP Registry. See the [Changelog](/changelog).
+</Expandable>

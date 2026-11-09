@@ -1,0 +1,125 @@
+---
+title: Goals, Follows & Bookmarks
+description: Tools and resources for your personal roadbeat data — goals, progress, followed publishers, bookmarks, collections and the GDPR data export.
+---
+
+These tools work with **your own** roadbeat data in the Context Directory. They are available when you sign in with your **personal account** (Web Client) or use the **local sidecar** — never with a Studio sign-in, never anonymously.
+
+Endpoint: `/mcp/cd` (and `/mcp/all`; `cd_list_goals` and `cd_list_bookmarks` are also in the core set).
+
+<Callout kind="info">
+  **How the gateway reaches your data.** Over HTTP, the gateway exchanges your app's token for a five-minute token for the roadbeat Web Client, which forwards an allow-listed set of requests to the Context Directory with your own session. The app's token is never passed on, and your Context Directory tokens never leave the Web Client. The local sidecar uses the session you signed in with. See [Security Model](/security/security-model#no-token-passthrough).
+</Callout>
+
+## Consent and confirmation
+
+| Kind of tool | Consent class | First use | Every use |
+|--------------|---------------|-----------|-----------|
+| Reading goals, follows, bookmarks | `read_personal` | consent | — |
+| Adding and changing | `write_personal` | consent | — |
+| Deleting a goal or bookmark | `write_personal` | consent | **confirmation** |
+| Data export | `pii_egress` | consent | — |
+
+All write tools accept an `idempotencyKey` — see [Rate Limits & Retries](/accounts/limits#safe-retries-with-idempotency-keys).
+
+## Goals
+
+### `cd_list_goals`
+
+Your goals, highest priority first: `id`, `text`, `horizon` (`day`, `week`, `month`, `year`, `life`), `status`, `priority`, `template`, `parameters`, `progress`, `targetDate`, `notes`.
+
+<ParamField body="status" param-type="string">`active`, `paused`, `completed` or `abandoned`.</ParamField>
+<ParamField body="timeHorizon" param-type="string">`day`, `week`, `month`, `year` or `life`.</ParamField>
+
+Scope `cd:goals:read`.
+
+### `cd_add_goal`
+
+Adds a goal — from a template (recommended: roadbeat then knows which content serves it) or as free text. Assistants should ask you before adding goals.
+
+<ParamField body="filtersetId + goalId" param-type="string">The template, from [`cd_search_goal_templates`](/tools/goal-catalog#cd_search_goal_templates).</ParamField>
+<ParamField body="parameters" param-type="object">Values for the template's placeholders.</ParamField>
+<ParamField body="goalText" param-type="string">Free-text goal (3–300 characters) when not using a template.</ParamField>
+<ParamField body="timeHorizon" param-type="string" required="true">`day`, `week`, `month`, `year` or `life`.</ParamField>
+<ParamField body="priority" param-type="integer">0–100.</ParamField>
+<ParamField body="targetDate / notes" param-type="string">Optional; notes up to 1,000 characters.</ParamField>
+<ParamField body="idempotencyKey" param-type="string">UUID for safe retries.</ParamField>
+
+Scope `cd:goals:write`.
+
+### `cd_update_goal`
+
+Changes a goal's `status`, `priority`, `timeHorizon`, `parameters`, `notes` or `targetDate`. Pausing (`status: "paused"`) or abandoning keeps the history; prefer it over deleting. Scope `cd:goals:write`.
+
+### `cd_record_goal_progress`
+
+Records progress: `goalId`, `currentValue`, optional `targetValue` and `unit` (e.g. `km`). Scope `cd:goals:write`.
+
+### `cd_reorder_goals`
+
+Sets the order of your goals: pass up to 50 `goalIds`, most important first; the gateway assigns descending priorities. Scope `cd:goals:write`.
+
+### `cd_remove_goal`
+
+Deletes a goal. **Asks you to confirm every time** (*Delete your goal "…" (year)?*). Marked destructive. Scope `cd:goals:write`.
+
+## Follows
+
+| Tool | What it does | Scope |
+|------|--------------|-------|
+| `cd_list_follows` | Publishers you follow | `cd:follows:read` |
+| `cd_follow_publisher` | Follow a publisher (`publisherId` from search results or `discovery://publishers/{id}`) | `cd:follows:write` |
+| `cd_unfollow_publisher` | Stop following (marked destructive, no confirmation) | `cd:follows:write` |
+
+## Bookmarks and collections
+
+### `cd_list_bookmarks`
+
+Your bookmarks, newest first, with teaser `title`, `url`, `contentType` and `available` (false when the teaser is gone), plus your collections with item counts.
+
+<ParamField body="collectionId" param-type="string">Only bookmarks in this collection.</ParamField>
+<ParamField body="limit" param-type="integer">1–100, default 25.</ParamField>
+
+Teaser titles are publisher content and marked untrusted. Scope `cd:bookmarks:read`.
+
+### Changing bookmarks
+
+| Tool | What it does | Notes |
+|------|--------------|-------|
+| `cd_add_bookmark` | Bookmark a teaser (`teaserId`), optionally into `collectionId` | |
+| `cd_remove_bookmark` | Remove a bookmark | **confirmation every time** |
+| `cd_create_collection` | Create a collection (`name`, optional `icon`) | |
+| `cd_add_to_collection` | Put a bookmarked teaser into a collection | |
+
+All need `cd:bookmarks:write`.
+
+## Export your data
+
+### `cd_export_data`
+
+A GDPR export (Art. 15 / 20) of everything the Context Directory stores about you: account, sessions, location, goals, interests, preferences, subscriptions, follows, collections, bookmarks, publishing setup, Fediverse activity and audit log.
+
+- By default it returns the **record counts per section**, the export format and version, any fields excluded with the reason, and a link to the full JSON document: the resource **`cd://me/export`**.
+- Pass `sections` (for example `["goals", "bookmarks"]`) to get selected sections inline, up to about 60 KB; larger sections are listed under `notInlined` and stay in the linked document.
+
+What the gateway itself stores about you (consents, requests, audit log) is exported separately with [`gateway_export_my_data`](/tools/gateway#gateway_export_my_data).
+
+Your data leaves roadbeat into the AI app, so this tool has its own consent class `pii_egress` and scope `cd:export`. It is limited to **2 calls per minute**; the export it fetches is reused for two minutes (in memory only) so the app can read the linked document right away.
+
+<Callout kind="info">
+  The data export is not part of the Claude Desktop extension's permissions. With the local sidecar, add `cd:export` to `STDIO_SCOPES` to use it.
+</Callout>
+
+## Resources
+
+All personal resources are `read_personal` (consent required), private and never cached.
+
+| URI | Content | Scope |
+|-----|---------|-------|
+| `cd://me/profile` | Display name, username, locale | `cd:profile:read` |
+| `cd://me/goals` | Your goal portfolio | `cd:goals:read` |
+| `cd://me/goals/{goalId}` | One goal | `cd:goals:read` |
+| `cd://me/follows` | Followed publishers | `cd:follows:read` |
+| `cd://me/bookmarks` | All bookmarks (teaser ids and collections) | `cd:bookmarks:read` |
+| `cd://me/bookmarks/collections/{collectionId}` | Bookmarks of one collection | `cd:bookmarks:read` |
+| `cd://me/export` | Your full data export (consent class `pii_egress`) | `cd:export` |

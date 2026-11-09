@@ -1,0 +1,179 @@
+---
+title: Authorization Servers
+description: Enable Studio and the Web Client as OAuth 2.1 authorization servers, connect them to the gateway with AUTH_ISSUERS and pre-register clients.
+---
+
+The gateway does not sign anyone in. **roadbeat Studio** (organization accounts) and the **roadbeat Web Client** (personal accounts) run the OAuth 2.1 authorization server — the same module in both — and the gateway trusts their tokens. You can enable one or both.
+
+What the authorization server provides: RFC 8414 metadata, PKCE `S256` for every client, RFC 8707 resource indicators (tokens bound to the gateway), RFC 9207 `iss` in responses, Client ID Metadata Documents, pre-registered clients, rotating refresh tokens, and RFC 8693 token exchange for the gateway.
+
+## 1. Create keys
+
+You need two ES256 (EC P-256) key pairs:
+
+- the **signing key** of each authorization server (`OAUTH_JWKS`), and
+- the **gateway's client key** for token exchange — private half in the gateway (`GATEWAY_OAUTH_KEY`), public half at every authorization server (`OAUTH_GATEWAY_CLIENT_JWKS`).
+
+This script uses only Node.js built-ins:
+
+```js
+// keygen.mjs — creates an ES256 (EC P-256) key pair as JWKs
+import { generateKeyPairSync, randomUUID } from 'node:crypto';
+
+const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+const meta = { kid: randomUUID(), alg: 'ES256', use: 'sig' };
+const priv = { ...privateKey.export({ format: 'jwk' }), ...meta };
+const pub = { ...publicKey.export({ format: 'jwk' }), ...meta };
+
+console.log('Private JWK:\n' + JSON.stringify(priv));
+console.log('\nPrivate JWKS (for OAUTH_JWKS):\n' + JSON.stringify({ keys: [priv] }));
+console.log('\nPublic JWKS (for OAUTH_GATEWAY_CLIENT_JWKS):\n' + JSON.stringify({ keys: [pub] }));
+```
+
+```bash
+node keygen.mjs   # run once per authorization server, and once for the gateway
+```
+
+Store private keys as secrets. To rotate an authorization server's signing key, put the new key **first** in `OAUTH_JWKS` and keep the old one behind it until its tokens have expired.
+
+## 2. Configure Studio and/or the Web Client
+
+The variables are the same in both APIs (`.env` of the Studio API, `.env` of the Web Client API). The authorization server stays off until `OAUTH_ISSUER` is set.
+
+| Variable | Example | Description |
+|----------|---------|-------------|
+| `OAUTH_ISSUER` | `https://studio.example.com` | Public origin of **this API** — the issuer of its tokens. |
+| `OAUTH_WEB_URL` | `https://studio.example.com` | Origin of the web app that shows the consent screen (`/oauth-consent/:uid`). Defaults to `MAIL_BASE_URL` (Studio) or `WEB_URL` (Web Client). |
+| `OAUTH_GATEWAY_RESOURCES` | `https://mcp.example.com/mcp` | Comma-separated gateway resources tokens may be issued for. `/mcp/<view>` below each is accepted too. Must match the gateway's `PUBLIC_BASE_URL` + `/mcp`. |
+| `OAUTH_JWKS` / `OAUTH_JWKS_FILE` | `{"keys":[…]}` | Private ES256 signing keys (JSON or base64). **Required in production.** |
+| `OAUTH_API_RESOURCE` | `https://studio.example.com/api` | Resource of this API for exchanged tokens. Default `${OAUTH_ISSUER}/api`. Must equal the gateway's `upstreams` entry. |
+| `OAUTH_GATEWAY_CLIENT_ID` | `roadbeat-mcp-gateway` | The gateway's client id (default). |
+| `OAUTH_GATEWAY_CLIENT_JWKS` | `{"keys":[…]}` | **Public** JWKS of the gateway's client key. Enables token exchange. |
+| `OAUTH_CIMD_ENABLED` | `true` | Accept Client ID Metadata Documents (apps identified by an HTTPS URL). |
+| `OAUTH_TRUSTED_CIMD_HOSTS` | `claude.ai,anthropic.com` | Apps from these hosts are shown as verified (no *Unverified app* banner). |
+| `OAUTH_CIMD_ALLOWED_HOSTS` | — | Optional allow-list: only fetch metadata documents from these hosts. |
+| `OAUTH_ALLOW_DCR` | `false` | Dynamic client registration — deprecated by MCP, keep it off unless a client supports nothing else. |
+| `OAUTH_CLIENTS` | `[{…}]` | Pre-registered clients from configuration (JSON array of client metadata). |
+| `OAUTH_COOKIE_KEYS` | — | Optional; keys for the interaction cookies (newest first). Default: derived from the API's JWT secret. |
+| `OAUTH_TRUST_PROXY` | `true` for `https` issuers | Trust `X-Forwarded-*` headers from your reverse proxy. |
+
+Then:
+
+<Steps>
+  <Step title="Run the migrations">
+    Each API has a migration that adds the OAuth tables (Studio `20261109120000_oauth_authorization_server`, Web Client `20261109130000_oauth_authorization_server`). Run them with the project's usual `prisma migrate deploy` step.
+  </Step>
+  <Step title="Route the OAuth paths to the API">
+    `/oauth/*`, `/.well-known/oauth-authorization-server*` and `/.well-known/openid-configuration` must reach the **API**, not the web app — see the [Caddy example](/self-hosting/docker#reverse-proxy).
+  </Step>
+  <Step title="Check the metadata">
+    ```bash
+    curl -s https://studio.example.com/.well-known/oauth-authorization-server
+    ```
+    You should see the `/oauth/authorize`, `/oauth/token` and `/oauth/jwks` endpoints, `code_challenge_methods_supported: ["S256"]` and the gateway scopes in `scopes_supported`.
+  </Step>
+</Steps>
+
+### What each server issues
+
+| Authorization server | Scopes it can issue | Notes |
+|----------------------|---------------------|-------|
+| Studio | public reads, `studio:read`, `studio:write`, `studio:publish`, `studio:admin`, `mcp:admin` | Capped by the user's Studio role; `mcp:admin` only for platform super admins |
+| Web Client | public reads, all `cd:*` personal scopes, `cd:export` | Grants are bound to the browser session that consented; signing out revokes them |
+
+Clients that request no scope get the baseline `discovery:read schema:read cd:read:public`. Access tokens live 15 minutes; refresh tokens rotate on every use and expire 30 days after the first sign-in. On the Studio consent screen `mcp:admin` reads *Administer the roadbeat MCP Gateway: audit log, consents of all users, tool catalog*.
+
+Exchanged tokens carry the grant they were issued under, and both APIs check on every request that this grant still exists — disconnecting an app under **Connected AI apps** cuts its access immediately.
+
+### The "Connect an AI assistant" card (Web Client)
+
+The Web Client's **Connected AI apps** page can show a card that helps users connect their assistant: the connector URL with a copy button and setup steps for Claude, Claude Code, ChatGPT and Cursor. Enable it in the Web Client API's environment:
+
+| Variable | Example | Description |
+|----------|---------|-------------|
+| `MCP_GATEWAY_URL` | `https://mcp.example.com` | Public base URL of the gateway, **without** `/mcp`. The card shows `<MCP_GATEWAY_URL>/mcp` — list that URL in `OAUTH_GATEWAY_RESOURCES` too. Unset = no card (the list of connected apps stays). |
+| `MCP_GATEWAY_MCPB_URL` | `https://mcp.example.com/downloads/roadbeat.mcpb` | Optional download URL of the [Claude Desktop extension](/connect/claude-desktop-extension). Unset = no extension tab. |
+
+The web app reads both from the public endpoint `GET /api/v1/config/mcp`.
+
+## 3. Configure the gateway
+
+```bash
+PUBLIC_BASE_URL=https://mcp.example.com
+AUTH_ISSUERS='[
+  {"name":"studio","issuer":"https://studio.example.com","jwksUri":"https://studio.example.com/oauth/jwks",
+   "principalType":"user","orgClaim":"organizationId","upstreams":{"studio":"https://studio.example.com/api"}},
+  {"name":"web-client","issuer":"https://app.example.com","jwksUri":"https://app.example.com/oauth/jwks",
+   "principalType":"user","upstreams":{"webclient":"https://app.example.com/api"}}
+]'
+GATEWAY_OAUTH_KEY='{"kty":"EC","crv":"P-256","x":"…","y":"…","d":"…","kid":"…","alg":"ES256","use":"sig"}'
+```
+
+- `upstreams.studio` enables the Studio tools for that issuer's users; `upstreams.webclient` enables the personal-data and Compass tools. The URL must equal the authorization server's `OAUTH_API_RESOURCE`.
+- The gateway finds each server's token endpoint in its metadata (or use `tokenEndpoint`).
+- Every advertised issuer appears in `authorization_servers` of the Protected Resource Metadata. The MCP client chooses which one to sign in with — most take the first. If personal and organization users need different sign-ins in the same client, publish separate gateway URLs or order the issuers by your main audience.
+
+Check the result:
+
+```bash
+curl -s https://mcp.example.com/.well-known/oauth-protected-resource/mcp
+```
+
+```json
+{
+  "resource": "https://mcp.example.com/mcp",
+  "authorization_servers": ["https://studio.example.com", "https://app.example.com"],
+  "scopes_supported": ["discovery:read", "schema:read", "cd:read:public"],
+  "bearer_methods_supported": ["header"],
+  "resource_name": "roadbeat MCP Gateway",
+  "resource_documentation": "https://docs.roadbeat.net/mcp-gateway"
+}
+```
+
+## Pre-register clients
+
+Apps that publish a **Client ID Metadata Document** (an HTTPS URL as client id, like Claude) need no registration. Others — for example ChatGPT, internal agents, or any client while your authorization server is only reachable on `localhost` — need a pre-registered client. Pre-registered clients are public clients (PKCE, no secret).
+
+The gateway's own [admin UI](/self-hosting/admin-ui) is such a client too: on an HTTPS gateway it identifies itself with a metadata document the gateway serves (`/admin/oauth-client.json`) and needs no registration; on a plain-HTTP gateway register `roadbeat-mcp-gateway-admin` (type *web*, redirect URI `${PUBLIC_BASE_URL}/admin/callback`) in Studio.
+
+<Tabs>
+  <Tab title="Studio" icon="building-2">
+    As a platform admin, open **Platform admin › OAuth clients** in Studio, or call the API with a platform admin session:
+
+    ```bash
+    curl -X POST https://studio.example.com/api/v1/manage/oauth-clients \
+      -H "Authorization: Bearer <platform admin token>" -H "Content-Type: application/json" \
+      -d '{"client_id":"chatgpt-connector","client_name":"ChatGPT","redirect_uris":["<callback URL shown in the ChatGPT connector form>"],"application_type":"web"}'
+    ```
+  </Tab>
+  <Tab title="Web Client" icon="user">
+    ```bash
+    curl -X POST https://app.example.com/api/v1/admin/oauth-clients \
+      -H "X-Admin-Key: <admin key>" -H "Content-Type: application/json" \
+      -d '{"client_id":"cursor-desktop","client_name":"Cursor","redirect_uris":["http://127.0.0.1/callback"],"application_type":"native"}'
+    ```
+  </Tab>
+  <Tab title="Configuration" icon="settings">
+    ```bash
+    OAUTH_CLIENTS='[{"client_id":"internal-agent","client_name":"Newsroom agent","redirect_uris":["https://agent.example.com/oauth/callback"]}]'
+    ```
+    Clients from configuration are marked as configured and cannot be deleted in the UI.
+  </Tab>
+</Tabs>
+
+Fields: `client_id` (3–64 lowercase letters, digits, `.`, `-`, `_`), `client_name`, up to 10 exact `redirect_uris`, `application_type` (`web` or `native` for apps with loopback redirects), and optional `client_uri`, `logo_uri`, `policy_uri`, `tos_uri` (HTTPS). Redirect URIs must match exactly what the client sends — take them from the client's documentation or settings.
+
+## External OpenID providers
+
+Organizations with Keycloak, Entra ID or another OpenID provider can list it in `AUTH_ISSUERS` instead. Its access tokens must be RFC 9068 JWTs (`typ: at+jwt`, asymmetric signature) with the gateway resource as audience and the gateway scopes in `scope`. Without an `upstreams` entry its users get the public tools only.
+
+## Development tokens
+
+For local development without an authorization server, the gateway repository can mint test tokens:
+
+```bash
+pnpm dev:token -- --sub alice --client claude-code --scope "discovery:read schema:read cd:read:public"
+# options: --aud http://localhost:3700/mcp  --ttl 3600  --org org-1  --name "Alice"
+```
+
+The first run writes a key pair to `.dev/`; point `AUTH_DEV_JWKS_FILE` at `.dev/dev-jwks.json`. Tokens use the issuer `roadbeat-dev` and are **ignored in production**.

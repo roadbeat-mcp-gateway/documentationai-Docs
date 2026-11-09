@@ -1,0 +1,64 @@
+---
+title: Schema Registry
+description: Look up roadbeat's structured content types, read their JSON Schemas and validate content payloads before creating drafts.
+---
+
+roadbeat content is not flat "posts": every item has a **content type** (news, event, recipe, job offer, …) defined by a versioned JSON Schema in the roadbeat Schema Registry. These tools let an assistant understand those types and check content against them. All are read-only and public (`read_public`, scope `schema:read`).
+
+Endpoint: `/mcp/schema` (and `/mcp/all`; `schema_list_types` is also in the core set).
+
+## Tools
+
+### `schema_list_types`
+
+Lists content types with `id`, `title`, a short `description`, `categories` and `version`.
+
+<ParamField body="category" param-type="string">Only types in this category (key from `schema_list_categories`).</ParamField>
+<ParamField body="locale" param-type="string">Label language, e.g. `de` (default English).</ParamField>
+
+### `schema_lookup_type`
+
+Describes one content type: title, version, categories and a **field summary** (name, type, required). Includes links to the full documents as resources.
+
+<ParamField body="typeId" param-type="string" required="true">Content type id, e.g. `news`, `event`, `recipe`.</ParamField>
+<ParamField body="include" param-type="array">Full documents to add (can be large): `metadata` (the JSON Schema 2020-12), `form` (the Studio editor form), `teaser` (the teaser mapping), `labels` (field labels in `locale`).</ParamField>
+<ParamField body="locale" param-type="string">Label language.</ParamField>
+
+### `schema_validate_payload`
+
+Validates a content document against its type's metadata schema and reports **all** errors (`path`, `message`, `keyword`). Validation runs in the gateway with JSON Schema 2020-12 and every shared roadbeat definition loaded; nothing is stored. Use it before creating drafts.
+
+<ParamField body="typeId" param-type="string" required="true">Content type id.</ParamField>
+<ParamField body="payload" param-type="object" required="true">The content document to validate.</ParamField>
+
+```json
+{
+  "valid": false,
+  "errors": [
+    { "path": "/headline", "message": "must have required property 'en'", "keyword": "required" }
+  ]
+}
+```
+
+Rate limit: 60 calls / minute.
+
+### `schema_list_categories`
+
+Content-type categories with `key`, localized `label` and the number of `types`. Optional `locale`.
+
+## Resources
+
+All schema resources are cached for an hour.
+
+| URI | Content |
+|-----|---------|
+| `schema://types` | All active content types |
+| `schema://types/{typeId}` | Metadata JSON Schema (`application/schema+json`) |
+| `schema://types/{typeId}/form` | Studio editor form definition |
+| `schema://types/{typeId}/teaser` | How the type maps to its Discovery Node teaser |
+| `schema://categories` | Categories with counts |
+| `schema://categories/i18n/{locale}` | Localized category labels |
+
+<Callout kind="info">
+  Comparing two versions of a schema and listing registry nodes are not available: the Schema Registry does not keep schema versions or a node list yet. For drafting content in your organization, prefer the Studio tools — [`studio_get_content_type`](/tools/studio#studio_get_content_type) returns exactly the schema your Studio uses.
+</Callout>

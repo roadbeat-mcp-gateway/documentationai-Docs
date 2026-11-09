@@ -1,0 +1,68 @@
+---
+title: Rate Limits & Retries
+description: Per-account and per-tool rate limits of the roadbeat MCP Gateway, result sizes and paging, and idempotency keys for safe retries.
+---
+
+## Rate limits
+
+Limits count calls per **minute**, separately for every combination of **your account × app**. Connecting a second app gives it its own budget.
+
+### Per account and app
+
+| Who | Calls per minute (all tools and resource reads together) |
+|-----|----------------------------------------------------------|
+| Anonymous (if enabled) | 30 |
+| Signed-in user | 240 |
+| Service account | 600 |
+| Local sidecar | 1,200 |
+
+### Per tool
+
+Some tools have a tighter limit of their own on top:
+
+| Tool | Calls per minute |
+|------|------------------|
+| `search`, `discovery_search`, `schema_validate_payload` | 60 |
+| `discovery_search_by_goal`, `discovery_more_like_this`, `discovery_explain_result` | 30 |
+| `studio_create_draft`, `studio_update_draft`, `studio_create_<type>` | 30 |
+| `compass_review_today`, `compass_match_content_to_goals` | 20 |
+| `studio_publish_content`, `studio_unpublish_content`, `studio_distribute_to_discovery`, `studio_translate_content`, `studio_upload_asset` | 10 |
+| `studio_create_locale_variant` | 20 |
+| `studio_update_asset` | 30 |
+| `cd_export_data`, `gateway_export_my_data` | 2 |
+
+When a limit is reached, the tool answers *"Rate limit exceeded. Retry in N s."* Wait the given number of seconds; windows reset every minute.
+
+<Callout kind="info">
+  Operators may add a coarser limit at their reverse proxy and can share the windows across several gateway instances with Redis. The numbers above are the gateway's built-in defaults.
+</Callout>
+
+## Result sizes and paging
+
+The gateway keeps every answer small enough for the context window of today's assistants:
+
+- Search tools return at most **50 results per page** (default 10). Use `page` to continue; `hasMore` tells you whether there is more.
+- Federated search merges results from all Discovery Nodes and looks at the first 100 results per node and query. Narrow the search instead of paging very deep.
+- `cd_list_bookmarks` returns up to 100 bookmarks (default 25); `studio_list_content` up to 50 items per page (default 20).
+- The data export returns counts and a link to the full document; inline sections are capped at about 60 KB.
+
+## Safe retries with idempotency keys
+
+MCP connections can drop, and apps retry. To make sure a retry does not add the same goal twice or create a second draft, every write tool accepts an **`idempotencyKey`**: any UUID the app picks for one intended action.
+
+| Situation | What the gateway does |
+|-----------|-----------------------|
+| First call with a key | Runs the tool and remembers the result for **24 hours** |
+| Same key, same arguments (a retry) | Returns the remembered result — nothing runs twice |
+| Same key, different arguments | Refuses: *"idempotencyKey was already used with different arguments. Use a new key for a new action."* |
+| No key | Runs the tool every time |
+
+Keys are scoped to your account and the tool. Write tools that accept a key: all `cd_*` write tools (`cd_add_goal`, `cd_update_goal`, `cd_record_goal_progress`, `cd_reorder_goals`, `cd_remove_goal`, `cd_follow_publisher`, `cd_unfollow_publisher`, `cd_add_bookmark`, `cd_remove_bookmark`, `cd_create_collection`, `cd_add_to_collection`) and all Studio write tools (`studio_create_draft`, `studio_update_draft`, `studio_create_<type>`, `studio_publish_content`, `studio_unpublish_content`, `studio_distribute_to_discovery`, `studio_translate_content`, `studio_create_locale_variant`, `studio_upload_asset`).
+
+<Callout kind="tip">
+  If a Studio write times out, the change may still have been saved. The gateway says so in its answer. Check with `studio_list_content` / `studio_get_content`, or repeat the call with the **same** `idempotencyKey`.
+</Callout>
+
+<Callout kind="info">
+  A remembered result is stored in the gateway's database for the 24-hour replay window, so it may contain the data the tool returned (for example the goal you added). Only calls that carry an `idempotencyKey` are stored this way, and the gateway's hourly retention job deletes them once the window has passed.
+</Callout>

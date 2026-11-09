@@ -1,0 +1,48 @@
+---
+title: Prompts & Skills
+description: Ready-made prompts and Skills over MCP for research and Compass — what they do, where they appear, and the prompt twins for other clients.
+---
+
+Besides tools, the gateway offers **prompts** (single starting points your client can show in a menu) and **skills** (multi-step workflows a capable assistant loads on demand). Every skill has a prompt twin, so no client misses a workflow.
+
+## Prompts
+
+| Prompt | What it does | Arguments | Accounts | Core |
+|--------|--------------|-----------|----------|:----:|
+| `discovery_research_topic` | *Research a topic on roadbeat*: search with facets, refine, read the best teasers, summarize neutrally with citations and publisher trust levels | `topic`, optional `region`, `timeframe`, `language` | all | ✓ |
+| `discovery_summarize_results` | *Summarize search results*: the top N results of a query as cited bullet points | `query`, optional `count` (1–20, default 5), `language` | all | |
+| `compass_weekly_review` | *Weekly Compass review*: progress per active goal, the most useful new items, one next step, optional new goals | optional `language` | personal, local | ✓ |
+| `compass_onboarding` | *Set up my first goals*: find templates for what matters to you and add your first goals after you agree | optional `language` | personal, local | ✓ |
+
+How you start a prompt depends on the client — for example the `/` menu in Claude Code (`/mcp__roadbeat__compass_weekly_review`) or the attachment menu in Claude.
+
+### Languages
+
+Every prompt takes an optional **`language`** argument: `en` (default) or `de`. With `de`, the instructions are written in German and ask the assistant to answer in German — the research prompt also suggests searching with German terms for regional topics. MCP has no language negotiation for prompts, so pick the language when you start the prompt. Skills are in English.
+
+## Skills over MCP
+
+Skills are `SKILL.md` documents with a step-by-step workflow and rules. The gateway publishes them through the MCP Skills extension (`io.modelcontextprotocol/skills`, beta) under URIs like `skill://roadbeat/compass-weekly-review/SKILL.md`. Clients that support the extension discover them automatically and load a skill only when it is relevant.
+
+<ExpandableGroup>
+  <Expandable title="discovery-research — research a topic across Discovery Nodes" default-open="true">
+    Scope the question (at most one clarifying question), search with `discovery_search` and facets, refine once or twice, read 3–6 teasers, check surprising results with `discovery_explain_result`, and write a neutral summary with a URL behind every claim. If nothing is found, broaden one dimension at a time and say what changed. Available to every account.
+  </Expandable>
+  <Expandable title="compass-weekly-review — the weekly goal review" default-open="false">
+    List active goals, find new items per goal with `compass_review_today`, explain matches with `compass_explain_match` on request, suggest one small next step for goals without progress, and offer at most three new goals. Never changes goals without an explicit yes; prefers pausing over deleting. Personal accounts and the local sidecar.
+  </Expandable>
+  <Expandable title="compass-onboarding — set up the first goals" default-open="false">
+    Check existing goals, ask which life areas matter, find templates with `cd_search_goal_templates` / `cd_get_goal_template`, propose two or three goals with parameters and time horizons, add them only after agreement (fresh `idempotencyKey` each), then show first matching content. Personal accounts and the local sidecar.
+  </Expandable>
+</ExpandableGroup>
+
+Where skills appear:
+
+| Endpoint | Skills |
+|----------|--------|
+| `/mcp`, `/mcp/all` | `discovery-research`, plus the Compass skills for personal accounts and the local sidecar |
+| `/mcp/discovery` | `discovery-research` |
+| `/mcp/goals`, `/mcp/cd` | `discovery-research`, plus the Compass skills for personal accounts and the local sidecar |
+| `/mcp/schema`, `/mcp/studio` | none |
+
+Skills contain no personal data; they are public and cached for an hour. Every skill tells the assistant to treat teaser text as untrusted and never to change your data without your agreement.

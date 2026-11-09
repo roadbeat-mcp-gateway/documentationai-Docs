@@ -1,0 +1,2007 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "operationId": "HealthController_health",
+        "summary": "Liveness and configuration summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "health"
+        ],
+        "description": "Public. Returns the version, the store in use, the size of the catalog and the configured upstreams. Used by the Docker health check."
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready",
+        "summary": "Readiness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Store not reachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "health"
+        ],
+        "description": "Public. `200` when the store (PostgreSQL) answers, `503` otherwise — use it as the readiness probe of your orchestrator."
+      }
+    },
+    "/api/v1/admin/clients": {
+      "get": {
+        "operationId": "AdminController_clients",
+        "summary": "List OAuth clients seen by the gateway",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            },
+            "description": "Maximum number of entries (1–500, default 100)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClientRecord"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "The OAuth clients (AI apps) that have called this gateway, newest activity first. This is a mirror for display and audit; clients are registered and removed at the authorization server (Studio / Web Client), not here."
+      }
+    },
+    "/api/v1/admin/activity": {
+      "get": {
+        "operationId": "AdminController_activity",
+        "summary": "Recent activity",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50
+            },
+            "description": "Maximum number of entries (1–500, default 50)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "The latest audit entries across all principals and clients (shortcut for an unfiltered `GET /api/v1/admin/audit`)."
+      }
+    },
+    "/api/v1/admin/audit": {
+      "get": {
+        "operationId": "AdminController_auditLog",
+        "summary": "Query the audit log",
+        "parameters": [
+          {
+            "name": "principalId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only entries of this principal (`<issuer name>:<subject>`)."
+          },
+          {
+            "name": "clientId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only entries of this OAuth client."
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "tool_call",
+                "resource_read",
+                "prompt_get",
+                "consent",
+                "confirmation",
+                "admin"
+              ]
+            },
+            "description": "Entry kind."
+          },
+          {
+            "name": "name",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact tool / resource / prompt / admin action name."
+          },
+          {
+            "name": "since",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Only entries at or after this time (ISO 8601)."
+          },
+          {
+            "name": "until",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Only entries at or before this time (ISO 8601)."
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "`nextCursor` of the previous page."
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50
+            },
+            "description": "Maximum number of entries (1–500, default 50)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Paginated, newest first. Combine the filters freely; follow `nextCursor` for older entries."
+      }
+    },
+    "/api/v1/admin/consents": {
+      "get": {
+        "operationId": "AdminController_consents",
+        "summary": "List consents",
+        "parameters": [
+          {
+            "name": "principalId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only consents of this principal."
+          },
+          {
+            "name": "clientId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only consents given to this OAuth client."
+          },
+          {
+            "name": "all",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "`true` also returns revoked and expired consents."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConsentRecord"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "The consent ledger. Without `all=true` only active consents (not revoked, not expired, uses left) are returned. At most 200 entries."
+      },
+      "post": {
+        "operationId": "AdminController_grant",
+        "summary": "Grant a consent",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantConsentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Grants a consent on behalf of a principal for one OAuth client and consent class. The action is written to the audit log before the response is sent."
+      }
+    },
+    "/api/v1/admin/consents/{id}": {
+      "delete": {
+        "operationId": "AdminController_revoke",
+        "summary": "Revoke a consent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Consent id."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "revoked": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Consent not found or already revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/consents/revoke-all": {
+      "post": {
+        "operationId": "AdminController_revokeAll",
+        "summary": "Revoke all consents of a principal",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeAllDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "revoked": {
+                      "type": "integer",
+                      "description": "Number of consents revoked."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Revokes every active consent of a principal — for all OAuth clients, or only for `clientId`. Use it when a user asks to cut off all AI apps at once."
+      }
+    },
+    "/api/v1/admin/principals/{principalId}/export": {
+      "get": {
+        "operationId": "AdminController_exportPrincipal",
+        "summary": "Export a principal's data (GDPR)",
+        "parameters": [
+          {
+            "name": "principalId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Principal id as shown in the audit log, e.g. `web-client:6c1d8e2a-…`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrincipalExport"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Everything the gateway stores about one principal in one JSON document: consents (including revoked ones), approval requests, stored write results (metadata only) and the audit log. Sent as an attachment with `Cache-Control: no-store`; the export itself is audited."
+      }
+    },
+    "/api/v1/admin/principals/{principalId}/erase": {
+      "post": {
+        "operationId": "AdminController_erasePrincipal",
+        "summary": "Erase a principal (GDPR)",
+        "parameters": [
+          {
+            "name": "principalId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Principal to erase."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EraseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Erased",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErasureResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`confirm` does not repeat the principal id, or you tried to erase your own principal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Deletes the principal's consents, approval requests, stored write results and tasks. Audit records are kept for accountability but re-keyed to a random pseudonym (`erased:<uuid>`) with personal payload fields removed; admin records that name the principal are re-keyed too. The erasure is audited under the pseudonym only. Cannot be undone — call it when the account was deleted at its authorization server."
+      }
+    },
+    "/api/v1/admin/confirmations": {
+      "get": {
+        "operationId": "AdminController_confirmations",
+        "summary": "List approvals",
+        "parameters": [
+          {
+            "name": "principalId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only approvals of this principal."
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "denied",
+                "expired",
+                "consumed"
+              ]
+            },
+            "description": "Only approvals in this state."
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50
+            },
+            "description": "Maximum number of entries (1–500, default 50)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfirmationRecord"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Consent requests and destructive-call confirmations, pending and decided, newest first."
+      }
+    },
+    "/api/v1/admin/catalog": {
+      "get": {
+        "operationId": "AdminController_catalogAll",
+        "summary": "Full catalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Every tool, resource and prompt the gateway ships, including entries disabled for this deployment, with scopes, consent class, confirmation mode and annotations. Typed `studio_create_<type>` tools are generated per organization and are not listed."
+      }
+    },
+    "/api/v1/admin/catalog/{kind}/{name}": {
+      "put": {
+        "operationId": "AdminController_setEnabled",
+        "summary": "Enable or disable a catalog entry",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "tool",
+                "resource",
+                "prompt"
+              ]
+            },
+            "description": "Entry kind."
+          },
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Entry name as listed in the catalog, e.g. `studio_publish_content`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapabilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "tool",
+                        "resource",
+                        "prompt"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid kind or body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "No such entry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Turns a tool, resource or prompt off (or back on) for this deployment. Instances pick up the change within a minute."
+      }
+    },
+    "/api/v1/catalog": {
+      "get": {
+        "operationId": "HubCatalogController_catalogForHub",
+        "summary": "Catalog for the Integration Hub",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "integration-hub"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "The catalog as the Studio Integration Hub reads it: only enabled tools (resources and prompts are listed with their `enabled` flag)."
+      }
+    },
+    "/api/v1/consents": {
+      "get": {
+        "operationId": "HubCatalogController_consents",
+        "summary": "Consents for the Integration Hub",
+        "parameters": [
+          {
+            "name": "principalId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only consents of this principal."
+          },
+          {
+            "name": "clientId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only consents given to this OAuth client."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConsentRecord"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "integration-hub"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Active consents, optionally filtered by principal and OAuth client (at most 200)."
+      },
+      "post": {
+        "operationId": "HubCatalogController_grant",
+        "summary": "Record a consent decision from the Integration Hub",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantConsentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "tags": [
+          "integration-hub"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Records a consent the user granted in the Integration Hub UI, so the gateway and the Hub share one ledger."
+      }
+    },
+    "/api/v1/admin-ui/config": {
+      "get": {
+        "operationId": "AdminUiController_uiConfig",
+        "summary": "Admin UI sign-in configuration",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUiConfig"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The authorization server is not reachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "admin-ui"
+        ],
+        "description": "Public. Tells the admin UI at `/admin` where to sign in: the authorization server (resolved from its metadata by the gateway), the UI's public client id, the resource and the `mcp:admin` scope. `configured: false` when no suitable issuer is set."
+      }
+    }
+  },
+  "info": {
+    "title": "roadbeat MCP Gateway — Admin & Integration API",
+    "description": "REST endpoints of the roadbeat MCP Gateway for administrators and the Studio Integration Hub: OAuth clients seen, activity and audit log, consent ledger, approvals, per-deployment catalog switches and GDPR export / erasure per principal, plus the admin UI bootstrap configuration and health probes.\n\nEvery admin and Integration Hub endpoint needs a gateway access token (audience = the gateway's `/mcp` resource) with the `mcp:admin` scope. The MCP endpoints themselves (`/mcp`, `/mcp/all`, `/mcp/{server}`) speak the Model Context Protocol, not REST — see \"MCP endpoints\" in this reference.",
+    "version": "0.1.0",
+    "contact": {
+      "name": "roadbeat e.V.",
+      "url": "https://roadbeat.net"
+    },
+    "license": {
+      "name": "AGPL-3.0",
+      "url": "https://www.gnu.org/licenses/agpl-3.0.html"
+    }
+  },
+  "tags": [
+    {
+      "name": "admin",
+      "description": "Gateway administration (`mcp:admin`)."
+    },
+    {
+      "name": "integration-hub",
+      "description": "Catalog and consent API used by the Studio Integration Hub (`mcp:admin`)."
+    },
+    {
+      "name": "admin-ui",
+      "description": "Public bootstrap configuration of the admin UI at `/admin`."
+    },
+    {
+      "name": "health",
+      "description": "Public liveness and readiness probes."
+    }
+  ],
+  "servers": [
+    {
+      "url": "https://{gateway}",
+      "description": "Your gateway",
+      "variables": {
+        "gateway": {
+          "default": "mcp.example.com",
+          "description": "Host of your MCP Gateway"
+        }
+      }
+    },
+    {
+      "url": "http://localhost:3700",
+      "description": "Local development"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "RFC 9068 access token (`typ: at+jwt`, asymmetrically signed) from a trusted authorization server, audience = `https://<gateway>/mcp`, scope `mcp:admin`."
+      }
+    },
+    "schemas": {
+      "GrantConsentDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "principalId",
+          "clientId",
+          "consentClass",
+          "lifetime"
+        ],
+        "properties": {
+          "principalId": {
+            "type": "string",
+            "description": "Gateway principal id: `<issuer name>:<subject>`, e.g. `web-client:7f3c…`.",
+            "example": "web-client:6c1d8e2a-4b7f-4f0e-9a51-2d1f0c9e7a10"
+          },
+          "clientId": {
+            "type": "string",
+            "description": "OAuth client id (a Client ID Metadata Document URL or a pre-registered id).",
+            "example": "https://ai-app.example/oauth/client-metadata.json"
+          },
+          "consentClass": {
+            "$ref": "#/components/schemas/ConsentClass"
+          },
+          "lifetime": {
+            "$ref": "#/components/schemas/ConsentLifetime"
+          }
+        }
+      },
+      "RevokeAllDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "principalId"
+        ],
+        "properties": {
+          "principalId": {
+            "type": "string",
+            "description": "Principal whose consents are revoked."
+          },
+          "clientId": {
+            "type": "string",
+            "description": "Only revoke the consents given to this OAuth client."
+          }
+        }
+      },
+      "EraseDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "confirm"
+        ],
+        "properties": {
+          "confirm": {
+            "type": "string",
+            "description": "Must repeat the principal id from the path — a guard against erasing the wrong account."
+          }
+        }
+      },
+      "CapabilityDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "`false` hides the entry from every catalog view of this deployment."
+          }
+        }
+      },
+      "ConsentClass": {
+        "type": "string",
+        "enum": [
+          "read_public",
+          "read_personal",
+          "write_personal",
+          "read_org",
+          "write_org",
+          "network_call",
+          "pii_egress"
+        ],
+        "description": "What a tool does with data. read_public and read_org need no consent; the other classes need a consent per (principal, OAuth client)."
+      },
+      "ConsentLifetime": {
+        "type": "string",
+        "enum": [
+          "once",
+          "day",
+          "days30",
+          "permanent"
+        ],
+        "description": "once = for one successful call · day = 24 hours · days30 = 30 days · permanent = until revoked."
+      },
+      "ErasureResult": {
+        "type": "object",
+        "required": [
+          "erased",
+          "pseudonym",
+          "counts"
+        ],
+        "properties": {
+          "erased": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "pseudonym": {
+            "type": "string",
+            "description": "Random pseudonym the audit records were re-keyed to (`erased:<uuid>`); not derivable from the principal id.",
+            "example": "erased:2f0c5b8e-7a4d-4c1e-9b61-0d3c2a9e8f17"
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "consents": {
+                "type": "integer",
+                "description": "Consents deleted"
+              },
+              "confirmations": {
+                "type": "integer",
+                "description": "Approval requests deleted"
+              },
+              "idempotency": {
+                "type": "integer",
+                "description": "Stored write results deleted"
+              },
+              "tasks": {
+                "type": "integer",
+                "description": "Task handles deleted"
+              },
+              "audit": {
+                "type": "integer",
+                "description": "Audit records pseudonymized (incl. admin records naming the principal)"
+              }
+            }
+          }
+        }
+      },
+      "PrincipalExport": {
+        "type": "object",
+        "description": "Everything the gateway stores about one principal, as one JSON document (sent as an attachment).",
+        "required": [
+          "export",
+          "consents",
+          "confirmations",
+          "idempotency",
+          "audit"
+        ],
+        "properties": {
+          "export": {
+            "type": "object",
+            "properties": {
+              "format": {
+                "type": "string",
+                "enum": [
+                  "roadbeat-mcp-gateway-principal-export"
+                ]
+              },
+              "formatVersion": {
+                "type": "integer",
+                "enum": [
+                  1
+                ]
+              },
+              "generatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "principalId": {
+                "type": "string"
+              },
+              "counts": {
+                "type": "object",
+                "properties": {
+                  "consents": {
+                    "type": "integer"
+                  },
+                  "confirmations": {
+                    "type": "integer"
+                  },
+                  "idempotency": {
+                    "type": "integer"
+                  },
+                  "audit": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "truncated": {
+                "type": "boolean",
+                "description": "true when the audit history exceeded 50,000 records; the newest are included."
+              },
+              "notes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "consents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConsentRecord"
+            },
+            "description": "Including revoked and expired consents."
+          },
+          "confirmations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfirmationRecord"
+            }
+          },
+          "idempotency": {
+            "type": "array",
+            "description": "Stored write results — metadata only, without the results themselves.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tool": {
+                  "type": "string"
+                },
+                "idempotencyKey": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "expiresAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "audit": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditRecord"
+            }
+          }
+        }
+      },
+      "AdminUiConfig": {
+        "type": "object",
+        "description": "Where the admin UI signs in. Public: it only names the authorization server and the UI's public client id.",
+        "required": [
+          "configured",
+          "resource",
+          "scope",
+          "gatewayVersion"
+        ],
+        "properties": {
+          "configured": {
+            "type": "boolean",
+            "description": "false when no authorization server for the admin UI is configured (the UI explains how to fix it)."
+          },
+          "issuer": {
+            "type": "string",
+            "example": "https://studio.example.com"
+          },
+          "issuerName": {
+            "type": "string",
+            "example": "studio"
+          },
+          "clientId": {
+            "type": "string",
+            "description": "The admin UI's public OAuth client id.",
+            "example": "https://mcp.example.com/admin/oauth-client.json"
+          },
+          "resource": {
+            "type": "string",
+            "description": "RFC 8707 resource the admin token is requested for.",
+            "example": "https://mcp.example.com/mcp"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "mcp:admin"
+            ]
+          },
+          "authorizationEndpoint": {
+            "type": "string",
+            "format": "uri"
+          },
+          "tokenEndpoint": {
+            "type": "string",
+            "format": "uri"
+          },
+          "revocationEndpoint": {
+            "type": "string",
+            "format": "uri"
+          },
+          "gatewayVersion": {
+            "type": "string",
+            "example": "0.1.0"
+          }
+        }
+      },
+      "ConsentRecord": {
+        "type": "object",
+        "required": [
+          "id",
+          "principalId",
+          "clientId",
+          "consentClass",
+          "scopes",
+          "lifetime",
+          "grantedAt",
+          "expiresAt",
+          "revokedAt",
+          "usesLeft"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "principalId": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "consentClass": {
+            "$ref": "#/components/schemas/ConsentClass"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "lifetime": {
+            "$ref": "#/components/schemas/ConsentLifetime"
+          },
+          "grantedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "null for `once` and `permanent` consents.",
+            "nullable": true
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "usesLeft": {
+            "type": "integer",
+            "description": "Remaining uses of a `once` consent; null otherwise.",
+            "nullable": true
+          }
+        }
+      },
+      "ConfirmationRecord": {
+        "type": "object",
+        "description": "A first-time consent request or a confirmation of a destructive call, decided on the approval page.",
+        "required": [
+          "id",
+          "kind",
+          "principalId",
+          "clientId",
+          "tool",
+          "argsHash",
+          "consentClass",
+          "summary",
+          "mode",
+          "status",
+          "createdAt",
+          "decidedAt",
+          "consumedAt",
+          "expiresAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "consent",
+              "confirmation"
+            ]
+          },
+          "principalId": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string",
+            "description": "Tool name, or `resource:<name>` for a resource read."
+          },
+          "argsHash": {
+            "type": "string",
+            "description": "SHA-256 of the call arguments (`consent:<class>` for consent requests). Arguments themselves are never stored."
+          },
+          "consentClass": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConsentClass"
+              }
+            ],
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "description": "The human-readable text shown on the approval page."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "elicit",
+              "out_of_band"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "denied",
+              "expired",
+              "consumed"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "consumedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ClientRecord": {
+        "type": "object",
+        "description": "An OAuth client the gateway has seen (read-through mirror; the client registry itself lives at the authorization server).",
+        "required": [
+          "issuer",
+          "clientId",
+          "name",
+          "version",
+          "registration",
+          "trusted",
+          "firstSeenAt",
+          "lastSeenAt"
+        ],
+        "properties": {
+          "issuer": {
+            "type": "string",
+            "description": "Authorization server that issued the client's tokens (`local` for the stdio sidecar)."
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "Self-asserted client name (display only).",
+            "nullable": true
+          },
+          "version": {
+            "type": "string",
+            "nullable": true
+          },
+          "registration": {
+            "type": "string",
+            "description": "`cimd` (client id is an HTTPS URL), `local`, or `unknown`.",
+            "nullable": true
+          },
+          "trusted": {
+            "type": "boolean"
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AuditRecord": {
+        "type": "object",
+        "required": [
+          "id",
+          "ts",
+          "principalId",
+          "principalType",
+          "clientId",
+          "transport",
+          "kind",
+          "name",
+          "result",
+          "payload"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Monotonic id; also the pagination cursor."
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "principalId": {
+            "type": "string"
+          },
+          "principalType": {
+            "type": "string",
+            "enum": [
+              "user",
+              "service",
+              "anonymous",
+              "local"
+            ]
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "JSON-RPC request id."
+          },
+          "traceId": {
+            "type": "string",
+            "description": "W3C trace id when the client sent `traceparent`."
+          },
+          "protocolVersion": {
+            "type": "string",
+            "example": "2026-07-28"
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "streamable-http",
+              "stdio",
+              "approval-page",
+              "admin-api"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "tool_call",
+              "resource_read",
+              "prompt_get",
+              "consent",
+              "confirmation",
+              "admin"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Tool, resource URI, prompt or admin action name."
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error",
+              "denied",
+              "rate_limited",
+              "input_required",
+              "replayed"
+            ]
+          },
+          "durationMs": {
+            "type": "integer"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Hashes and identifiers only (argsHash, destructive, resourceUris, idempotencyKey, confirmation mode, denial reason …) — never tokens or raw personal content."
+          }
+        }
+      },
+      "AuditPage": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditRecord"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Pass as `cursor` to get the next (older) page. Absent on the last page."
+          }
+        }
+      },
+      "ToolAnnotations": {
+        "type": "object",
+        "properties": {
+          "readOnlyHint": {
+            "type": "boolean"
+          },
+          "destructiveHint": {
+            "type": "boolean"
+          },
+          "idempotentHint": {
+            "type": "boolean"
+          },
+          "openWorldHint": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CatalogTool": {
+        "type": "object",
+        "required": [
+          "name",
+          "title",
+          "server",
+          "core",
+          "scopes",
+          "consentClass",
+          "confirmation",
+          "annotations",
+          "enabled"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "discovery_search"
+          },
+          "title": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string",
+            "enum": [
+              "gateway",
+              "studio",
+              "discovery",
+              "cd",
+              "schema",
+              "pod",
+              "augmentor",
+              "goals",
+              "web"
+            ]
+          },
+          "core": {
+            "type": "boolean",
+            "description": "Part of the core catalog served at `/mcp`."
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "consentClass": {
+            "$ref": "#/components/schemas/ConsentClass"
+          },
+          "confirmation": {
+            "type": "string",
+            "enum": [
+              "none",
+              "elicit",
+              "out_of_band"
+            ]
+          },
+          "annotations": {
+            "$ref": "#/components/schemas/ToolAnnotations"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CatalogResource": {
+        "type": "object",
+        "required": [
+          "name",
+          "uri",
+          "server",
+          "core",
+          "scopes",
+          "consentClass",
+          "enabled"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "uri": {
+            "type": "string",
+            "description": "Fixed URI or RFC 6570 URI template.",
+            "example": "schema://types/{typeId}"
+          },
+          "server": {
+            "type": "string"
+          },
+          "core": {
+            "type": "boolean"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "consentClass": {
+            "$ref": "#/components/schemas/ConsentClass"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CatalogPrompt": {
+        "type": "object",
+        "required": [
+          "name",
+          "server",
+          "core",
+          "scopes",
+          "enabled"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          },
+          "core": {
+            "type": "boolean"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Catalog": {
+        "type": "object",
+        "required": [
+          "tools",
+          "resources",
+          "prompts"
+        ],
+        "properties": {
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogTool"
+            }
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogResource"
+            }
+          },
+          "prompts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogPrompt"
+            }
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "service": {
+            "type": "string",
+            "example": "mcp-gateway"
+          },
+          "version": {
+            "type": "string",
+            "example": "0.1.0"
+          },
+          "store": {
+            "type": "string",
+            "enum": [
+              "prisma",
+              "memory"
+            ]
+          },
+          "catalog": {
+            "type": "object",
+            "properties": {
+              "tools": {
+                "type": "integer",
+                "example": 55
+              },
+              "resources": {
+                "type": "integer",
+                "example": 33
+              },
+              "prompts": {
+                "type": "integer",
+                "example": 4
+              }
+            }
+          },
+          "upstreams": {
+            "type": "object",
+            "properties": {
+              "discoveryNodes": {
+                "type": "integer",
+                "description": "Number of configured Discovery Nodes."
+              },
+              "schemaRegistry": {
+                "type": "string",
+                "format": "uri"
+              },
+              "contextDirectory": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          }
+        }
+      },
+      "Readiness": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_ready"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why the store is not reachable (only when not ready)."
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "description": "NestJS error body.",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 403
+          },
+          "message": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "example": "mcp:admin scope required"
+          },
+          "error": {
+            "type": "string",
+            "example": "Forbidden"
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing, expired or untrusted token, or wrong audience",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Token lacks the `mcp:admin` scope",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

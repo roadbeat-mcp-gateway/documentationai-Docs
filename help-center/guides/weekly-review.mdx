@@ -1,0 +1,65 @@
+---
+title: Your Weekly Compass Review
+description: Set up your first roadbeat goals with an AI assistant and run a weekly Compass review — what's new for each goal, why it matches, and what to do next.
+---
+
+This guide takes you from no goals to a weekly routine: your assistant finds goal templates that fit you, adds them after you agree, and every week shows what is new for each goal.
+
+**You need:** a personal roadbeat account and an assistant connected to the gateway with it — see [Quickstart](/quickstart). Any endpoint with the Compass tools works: `/mcp`, `/mcp/all` or `/mcp/goals` plus `/mcp/cd`.
+
+<Steps>
+  <Step title="Start the onboarding">
+    Pick the prompt **Set up my first goals** (`compass_onboarding`) from your client's prompt menu, or simply write:
+
+    ```text
+    Help me set up my first roadbeat goals.
+    ```
+
+    Clients with Skills over MCP load the `compass-onboarding` skill automatically.
+  </Step>
+
+  <Step title="Answer one question">
+    The assistant checks whether you already have goals and asks which one or two life areas matter most right now — career, health, learning, family, local life, finances or hobbies.
+  </Step>
+
+  <Step title="Choose from the proposals">
+    It searches the goal catalog (`cd_search_goal_templates`, `cd_get_goal_template`) and proposes two or three goals with filled-in parameters and a time horizon, saying why each fits. Change anything you like.
+  </Step>
+
+  <Step title="Agree — and give consent once">
+    Only after you say yes does the assistant add the goals (`cd_add_goal`). On first use the gateway asks for your consent — once for reading your goals (already in step 2) and once for changing them. Approve in the dialog or on the approval page; choose **For 30 days** if you plan a weekly routine.
+  </Step>
+
+  <Step title="See first results">
+    The assistant shows two matching items per goal from the last 30 days, with links to the sources.
+  </Step>
+</Steps>
+
+## Every week
+
+Pick the prompt **Weekly Compass review** (`compass_weekly_review`), or write:
+
+```text
+Do my weekly roadbeat Compass review.
+```
+
+The assistant then:
+
+1. lists your active goals with horizon, priority and progress,
+2. finds what is new for each goal in the last seven days (`compass_review_today`) and picks the one or two most useful items, with links,
+3. suggests one small, concrete next step for goals without progress — and asks before recording progress or changing a goal,
+4. optionally offers up to three related new goals (`compass_suggest_goals`).
+
+## Useful follow-ups
+
+| Ask | What happens |
+|-----|--------------|
+| *"Why did this article show up for my running goal?"* | `compass_explain_match` shows which content query matched — as an interactive [card](/tools/why-card) in supporting clients |
+| *"Which of my goals does this event serve?"* | `compass_match_content_to_goals` checks the teaser against all active goals |
+| *"I ran 12 km this week."* | `cd_record_goal_progress` — the assistant asks before recording |
+| *"Pause my language goal."* | `cd_update_goal` with `status: paused` — keeps the history, unlike deleting |
+| *"Bookmark the second item."* | `cd_add_bookmark` |
+
+<Callout kind="tip">
+  Goals from the catalog find much more content than free-text goals, because each template carries its own content queries. If a goal never brings anything new, ask the assistant to replace it with a fitting template.
+</Callout>

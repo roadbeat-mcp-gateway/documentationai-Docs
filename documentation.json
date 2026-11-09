@@ -1,0 +1,207 @@
+{
+  "name": "roadbeat MCP Gateway",
+  "initialRoute": "introduction",
+  "colors": {
+    "light": {
+      "brand": "#F97316"
+    },
+    "dark": {
+      "brand": "#FDBA74"
+    }
+  },
+  "seo": {
+    "indexing": true,
+    "following": true
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "icon": "book",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "icon": "rocket",
+            "pages": [
+              { "title": "Introduction", "path": "introduction", "icon": "home" },
+              { "title": "Quickstart", "path": "quickstart", "icon": "zap" },
+              { "title": "Core Concepts", "path": "concepts", "icon": "layers" }
+            ]
+          },
+          {
+            "group": "Connect Your Assistant",
+            "icon": "plug",
+            "pages": [
+              { "title": "Claude", "path": "connect/claude", "icon": "message-circle" },
+              { "title": "Claude Code", "path": "connect/claude-code", "icon": "terminal" },
+              { "title": "ChatGPT", "path": "connect/chatgpt", "icon": "message-square" },
+              { "title": "Cursor", "path": "connect/cursor", "icon": "mouse-pointer-2" },
+              { "title": "Claude Desktop Extension", "path": "connect/claude-desktop-extension", "icon": "monitor", "badge": "Beta" },
+              { "title": "MCP Inspector & Custom Agents", "path": "connect/mcp-inspector", "icon": "search-code" }
+            ]
+          },
+          {
+            "group": "Accounts & Permissions",
+            "icon": "key",
+            "pages": [
+              { "title": "Accounts & Sign-in", "path": "accounts/sign-in", "icon": "log-in" },
+              { "title": "Scopes", "path": "accounts/scopes", "icon": "list-checks" },
+              { "title": "Consent & Confirmations", "path": "accounts/consent", "icon": "shield-check" },
+              { "title": "Rate Limits & Retries", "path": "accounts/limits", "icon": "gauge" }
+            ]
+          },
+          {
+            "group": "Tools Reference",
+            "icon": "wrench",
+            "pages": [
+              { "title": "Catalog Overview", "path": "tools/overview", "icon": "layout-grid" },
+              { "title": "Search & Fetch", "path": "tools/search-and-fetch", "icon": "search" },
+              { "title": "Discovery", "path": "tools/discovery", "icon": "compass" },
+              { "title": "Schema Registry", "path": "tools/schema-registry", "icon": "file-json" },
+              { "title": "Goal Catalog & Geo", "path": "tools/goal-catalog", "icon": "map" },
+              { "title": "Goals, Follows & Bookmarks", "path": "tools/personal-data", "icon": "bookmark" },
+              { "title": "Compass", "path": "tools/compass", "icon": "target" },
+              { "title": "Studio", "path": "tools/studio", "icon": "pen-tool" },
+              { "title": "Gateway", "path": "tools/gateway", "icon": "user-check" },
+              { "title": "Prompts & Skills", "path": "tools/prompts-and-skills", "icon": "sparkles" },
+              { "title": "\"Why am I seeing this?\" Card", "path": "tools/why-card", "icon": "help-circle", "badge": "Beta" }
+            ]
+          },
+          {
+            "group": "Security & Privacy",
+            "icon": "shield",
+            "pages": [
+              { "title": "Privacy & Your Data", "path": "security/privacy", "icon": "lock" },
+              { "title": "Security Model", "path": "security/security-model", "icon": "shield-alert" }
+            ]
+          },
+          {
+            "group": "Self-Hosting",
+            "icon": "server",
+            "pages": [
+              { "title": "Deployment Overview", "path": "self-hosting/overview", "icon": "network" },
+              { "title": "Run with Docker", "path": "self-hosting/docker", "icon": "container" },
+              { "title": "Configuration Reference", "path": "self-hosting/configuration", "icon": "settings" },
+              { "title": "Authorization Servers", "path": "self-hosting/authorization-servers", "icon": "key-round" },
+              { "title": "Admin UI", "path": "self-hosting/admin-ui", "icon": "layout-dashboard", "badge": "New" },
+              { "title": "Operations", "path": "self-hosting/operations", "icon": "activity" }
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "icon": "code",
+        "groups": [
+          {
+            "group": "Overview",
+            "icon": "file-text",
+            "pages": [
+              { "title": "API Overview", "path": "api-reference/overview", "icon": "book-open" },
+              { "title": "Authentication", "path": "api-reference/authentication", "icon": "lock" },
+              { "title": "MCP Endpoints", "path": "api-reference/mcp-endpoints", "icon": "plug" }
+            ]
+          },
+          {
+            "group": "Admin Endpoints",
+            "icon": "settings",
+            "openapi": "api-reference/openapi.json",
+            "hidden-apis": [
+              "GET /api/v1/health",
+              "GET /api/v1/health/ready",
+              "GET /api/v1/admin-ui/config",
+              "GET /api/v1/catalog",
+              "GET /api/v1/consents",
+              "POST /api/v1/consents"
+            ]
+          },
+          {
+            "group": "Integration Hub Endpoints",
+            "icon": "blocks",
+            "openapi": "api-reference/openapi.json",
+            "hidden-apis": [
+              "GET /api/v1/health",
+              "GET /api/v1/health/ready",
+              "GET /api/v1/admin-ui/config",
+              "GET /api/v1/admin/clients",
+              "GET /api/v1/admin/activity",
+              "GET /api/v1/admin/audit",
+              "GET /api/v1/admin/consents",
+              "POST /api/v1/admin/consents",
+              "DELETE /api/v1/admin/consents/{id}",
+              "POST /api/v1/admin/consents/revoke-all",
+              "GET /api/v1/admin/principals/{principalId}/export",
+              "POST /api/v1/admin/principals/{principalId}/erase",
+              "GET /api/v1/admin/confirmations",
+              "GET /api/v1/admin/catalog",
+              "PUT /api/v1/admin/catalog/{kind}/{name}"
+            ]
+          },
+          {
+            "group": "System Endpoints",
+            "icon": "heart-pulse",
+            "openapi": "api-reference/openapi.json",
+            "hidden-apis": [
+              "GET /api/v1/admin/clients",
+              "GET /api/v1/admin/activity",
+              "GET /api/v1/admin/audit",
+              "GET /api/v1/admin/consents",
+              "POST /api/v1/admin/consents",
+              "DELETE /api/v1/admin/consents/{id}",
+              "POST /api/v1/admin/consents/revoke-all",
+              "GET /api/v1/admin/principals/{principalId}/export",
+              "POST /api/v1/admin/principals/{principalId}/erase",
+              "GET /api/v1/admin/confirmations",
+              "GET /api/v1/admin/catalog",
+              "PUT /api/v1/admin/catalog/{kind}/{name}",
+              "GET /api/v1/catalog",
+              "GET /api/v1/consents",
+              "POST /api/v1/consents"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Help Center",
+        "icon": "help-circle",
+        "pages": [
+          { "title": "Help Center", "path": "help-center", "icon": "home" },
+          {
+            "group": "FAQs",
+            "icon": "help-circle",
+            "expandable": false,
+            "pages": [
+              { "title": "General Questions", "path": "help-center/faq/general" },
+              { "title": "Privacy & Data", "path": "help-center/faq/privacy" }
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "icon": "alert-triangle",
+            "expandable": false,
+            "pages": [
+              { "title": "Connection & Sign-in", "path": "help-center/troubleshooting/connection" },
+              { "title": "Tool Errors", "path": "help-center/troubleshooting/tool-errors" }
+            ]
+          },
+          {
+            "group": "Guides",
+            "icon": "book-open",
+            "expandable": false,
+            "pages": [
+              { "title": "Your Weekly Compass Review", "path": "help-center/guides/weekly-review" },
+              { "title": "Drafting Studio Content with AI", "path": "help-center/guides/studio-drafts" }
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "icon": "clock",
+        "pages": [
+          { "title": "Changelog", "path": "changelog", "icon": "history" }
+        ]
+      }
+    ]
+  }
+}
