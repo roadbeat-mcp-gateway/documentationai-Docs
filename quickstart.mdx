@@ -9,7 +9,7 @@ In five minutes your assistant will search roadbeat content and — once you sig
 
 You need:
 
-- **The URL of a roadbeat MCP Gateway**, for example `https://mcp.example.com/mcp`. Your roadbeat operator (or your own [self-hosted gateway](/self-hosting/overview)) gives you this URL. With a personal account, look for the **Connect an AI assistant** card under **Connected AI apps** in the roadbeat Web Client — it shows the URL and the setup steps for your assistant.
+- **The URL of the roadbeat MCP Gateway:** `https://mcp.roadbeat.net/mcp` (a [self-hosted gateway](/self-hosting/overview) has its own URL). With a personal account, look for the **Connect an AI assistant** card under **Connected AI apps** in the roadbeat Web Client — it shows the URL and the setup steps for your assistant.
 - **A roadbeat account** — a personal account in the roadbeat Web Client for your goals, follows and bookmarks, or a Studio account for your organization's content. Public search works with either.
 - **An MCP-capable assistant**: Claude, Claude Code, ChatGPT, Cursor, or the MCP Inspector.
 
@@ -26,25 +26,25 @@ You need:
     <Tabs>
       <Tab title="Claude Code" icon="terminal">
         ```bash
-        claude mcp add --transport http roadbeat https://mcp.example.com/mcp
+        claude mcp add --transport http roadbeat https://mcp.roadbeat.net/mcp
         ```
         Then type `/mcp` in a Claude Code session and choose **roadbeat › Authenticate**.
       </Tab>
       <Tab title="Claude" icon="message-circle">
-        In Claude, open **Settings › Connectors › Add custom connector**, enter a name (`roadbeat`) and the URL `https://mcp.example.com/mcp`, then select **Connect**.
+        In Claude, open **Settings › Connectors › Add custom connector**, enter a name (`roadbeat`) and the URL `https://mcp.roadbeat.net/mcp`, then select **Connect**.
       </Tab>
       <Tab title="Cursor" icon="mouse-pointer-2">
         Add the server to `~/.cursor/mcp.json` (or `.cursor/mcp.json` in your project):
         ```json
         {
           "mcpServers": {
-            "roadbeat": { "url": "https://mcp.example.com/mcp" }
+            "roadbeat": { "url": "https://mcp.roadbeat.net/mcp" }
           }
         }
         ```
       </Tab>
       <Tab title="ChatGPT" icon="message-square">
-        Enable developer mode in ChatGPT's connector settings and create a connector with the URL `https://mcp.example.com/mcp` and OAuth authentication. See [ChatGPT](/connect/chatgpt).
+        Enable developer mode in ChatGPT's connector settings and create a connector with the URL `https://mcp.roadbeat.net/mcp` and OAuth authentication. See [ChatGPT](/connect/chatgpt).
       </Tab>
     </Tabs>
   </Step>

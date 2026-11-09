@@ -541,7 +541,8 @@ doc.info = {
   contact: { name: 'roadbeat e.V.', url: 'https://roadbeat.net' },
 };
 doc.servers = [
-  { url: 'https://{gateway}', description: 'Your gateway', variables: { gateway: { default: 'mcp.example.com', description: 'Host of your MCP Gateway' } } },
+  { url: 'https://mcp.roadbeat.net', description: 'roadbeat (hosted)' },
+  { url: 'https://{gateway}', description: 'Self-hosted gateway', variables: { gateway: { default: 'mcp.example.com', description: 'Host of your MCP Gateway' } } },
   { url: 'http://localhost:3700', description: 'Local development' },
 ];
 doc.tags = [

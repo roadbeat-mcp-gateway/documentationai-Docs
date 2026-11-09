@@ -47,22 +47,22 @@ Requests carrying an `Origin` header are only accepted from hosts in `MCP_ALLOWE
 ## Authorization discovery
 
 ```bash
-curl -si -X POST https://mcp.example.com/mcp -H 'content-type: application/json' -d '{}'
+curl -si -X POST https://mcp.roadbeat.net/mcp -H 'content-type: application/json' -d '{}'
 ```
 
 ```text
 HTTP/1.1 401 Unauthorized
 www-authenticate: Bearer error="invalid_token", error_description="Missing Authorization header",
   scope="discovery:read schema:read cd:read:public",
-  resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp"
+  resource_metadata="https://mcp.roadbeat.net/.well-known/oauth-protected-resource/mcp"
 ```
 
 The metadata document names the authorization servers:
 
 ```json
 {
-  "resource": "https://mcp.example.com/mcp",
-  "authorization_servers": ["https://app.example.com"],
+  "resource": "https://mcp.roadbeat.net/mcp",
+  "authorization_servers": ["https://studio.roadbeat.net", "https://app.roadbeat.net"],
   "scopes_supported": ["discovery:read", "schema:read", "cd:read:public"],
   "bearer_methods_supported": ["header"],
   "resource_name": "roadbeat MCP Gateway",

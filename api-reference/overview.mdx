@@ -13,7 +13,8 @@ Besides its MCP endpoints, the gateway has a small **REST API** for operating it
 
 | Environment | Base URL |
 |-------------|----------|
-| Your deployment | `https://<gateway host>` — the gateway's `PUBLIC_BASE_URL` |
+| roadbeat (hosted) | `https://mcp.roadbeat.net` |
+| Self-hosted | `https://<gateway host>` — the gateway's `PUBLIC_BASE_URL` |
 | Local development | `http://localhost:3700` |
 
 All REST endpoints live under `/api/v1/`. Every gateway also serves this reference as Swagger UI at `/api/docs` (JSON at `/api/docs-json`).
@@ -31,7 +32,7 @@ All REST endpoints live under `/api/v1/`. Every gateway also serves this referen
 Admin and Integration Hub endpoints need a gateway access token with the **`mcp:admin`** scope in the `Authorization` header:
 
 ```bash
-curl https://mcp.example.com/api/v1/admin/catalog \
+curl https://mcp.roadbeat.net/api/v1/admin/catalog \
   -H "Authorization: Bearer <access token>"
 ```
 

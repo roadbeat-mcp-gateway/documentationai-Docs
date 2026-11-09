@@ -16,7 +16,7 @@ The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) is the of
   </Step>
   <Step title="Connect">
     - **Transport type:** Streamable HTTP
-    - **URL:** `https://mcp.example.com/mcp` (or `/mcp/all`, `/mcp/discovery`, …)
+    - **URL:** `https://mcp.roadbeat.net/mcp` (or `/mcp/all`, `/mcp/discovery`, …)
 
     Use the Inspector's OAuth settings to run the sign-in flow: it discovers the roadbeat authorization server from the gateway, opens the sign-in in your browser and returns with a token.
   </Step>
@@ -49,13 +49,13 @@ Inspect the discovery documents with `curl`:
 
 ```bash
 # 1. Unauthenticated call → 401 with a pointer to the metadata
-curl -si -X POST https://mcp.example.com/mcp -H 'content-type: application/json' -d '{}' | grep -i www-authenticate
+curl -si -X POST https://mcp.roadbeat.net/mcp -H 'content-type: application/json' -d '{}' | grep -i www-authenticate
 
 # 2. Protected Resource Metadata (RFC 9728) → authorization_servers
-curl -s https://mcp.example.com/.well-known/oauth-protected-resource/mcp
+curl -s https://mcp.roadbeat.net/.well-known/oauth-protected-resource/mcp
 
 # 3. Authorization server metadata (RFC 8414), e.g. the Web Client
-curl -s https://app.example.com/.well-known/oauth-authorization-server
+curl -s https://app.roadbeat.net/.well-known/oauth-authorization-server
 ```
 
 The full protocol surface is described in [MCP Endpoints](/api-reference/mcp-endpoints).

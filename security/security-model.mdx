@@ -13,7 +13,7 @@ Every access token must:
 
 - come from an **allow-listed issuer** and be signed with an **asymmetric** algorithm (RS256/384, PS256/384, ES256/384, EdDSA) — shared-secret and unsigned tokens are refused;
 - be an **RFC 9068 access token** (`typ: at+jwt`) — refresh tokens, ID tokens or second-factor challenge tokens replayed as access tokens are refused;
-- carry the endpoint as **audience** (RFC 8707), e.g. `https://mcp.example.com/mcp` — a token for another service, or for another roadbeat gateway, does not work here;
+- carry the endpoint as **audience** (RFC 8707), e.g. `https://mcp.roadbeat.net/mcp` — a token for another service, or for another roadbeat gateway, does not work here;
 - not be expired (30 seconds clock tolerance by default) and carry the **scopes** the call needs.
 
 Tokens are only accepted in the `Authorization` header, never in URLs, and never written to logs. Access tokens live 15 minutes; refresh tokens rotate on every use and a reused refresh token revokes the whole grant.

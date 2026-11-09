@@ -80,7 +80,7 @@ A confirmation is bound to **this exact call**: same app, same tool, same argume
 
 ## Approval links
 
-- Approval links look like `https://<gateway>/approve/<id>?sig=…`. They are signed and only valid for the request they were made for.
+- Approval links look like `https://mcp.roadbeat.net/approve/<id>?sig=…`. They are signed and only valid for the request they were made for.
 - They expire after **10 minutes** by default (operators can change this with `APPROVAL_TTL_SEC`). After that, let the app call the tool again to get a fresh link.
 - A decision is final: an approved or declined link shows *Already decided* when opened again.
 - Treat approval links like a one-time password: do not share them. In release 0.1.0 the page does not yet ask you to sign in again, so anyone with the link could decide it while it is valid.

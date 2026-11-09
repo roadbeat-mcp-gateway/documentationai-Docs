@@ -15,13 +15,13 @@ Claude Code talks to the gateway over Streamable HTTP and signs you in with OAut
   <Step title="Register the server">
     <CodeGroup tabs="Full catalog,Core only,Studio only">
     ```bash
-    claude mcp add --transport http roadbeat https://mcp.example.com/mcp/all
+    claude mcp add --transport http roadbeat https://mcp.roadbeat.net/mcp/all
     ```
     ```bash
-    claude mcp add --transport http roadbeat https://mcp.example.com/mcp
+    claude mcp add --transport http roadbeat https://mcp.roadbeat.net/mcp
     ```
     ```bash
-    claude mcp add --transport http roadbeat-studio https://mcp.example.com/mcp/studio
+    claude mcp add --transport http roadbeat-studio https://mcp.roadbeat.net/mcp/studio
     ```
     </CodeGroup>
 
@@ -47,7 +47,7 @@ Commit a `.mcp.json` to your repository. Every team member signs in with their o
   "mcpServers": {
     "roadbeat": {
       "type": "http",
-      "url": "https://mcp.example.com/mcp/all"
+      "url": "https://mcp.roadbeat.net/mcp/all"
     }
   }
 }
