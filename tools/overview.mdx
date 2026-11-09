@@ -16,8 +16,9 @@ The gateway ships a fixed, code-reviewed catalog — no tools are loaded from el
 | `/mcp/cd` | [Goal catalog](/tools/goal-catalog) and [your goals, follows, bookmarks](/tools/personal-data) | Personal assistants |
 | `/mcp/goals` | [Compass](/tools/compass) | Personal assistants |
 | `/mcp/studio` | [Studio](/tools/studio), including the typed `studio_create_<type>` tools and `studio://` resources | Editors |
+| `/mcp/pod` | Your organization's [Content Pod](/tools/studio#content-pod) — once your Studio allows it | Publishers |
 
-`/mcp/pod` and `/mcp/augmentor` exist but are empty in release 0.1.0 — the Content Pod and Augmentor servers follow later. `search`, `fetch` and the [gateway tools](/tools/gateway) are part of `/mcp` and `/mcp/all` only.
+`/mcp/augmentor` exists but is empty — the Augmentor server follows later. `/mcp/pod` lists tools only when your organization's Studio opens its Content Pod API to AI assistants. `search`, `fetch` and the [gateway tools](/tools/gateway) are part of `/mcp` and `/mcp/all` only.
 
 ## Who sees which tools
 
@@ -88,6 +89,9 @@ Operators can switch individual tools, resources and prompts off for their deplo
 | `studio_request_review` / `studio_approve_review` | Move an item to review / approve it — approval asks you (Studio Pro) | studio | | organization |
 | `studio_bulk_publish` / `studio_bulk_translate` | Publish or translate up to 50 items as a background task | studio | | organization |
 | `studio_ai_*` | Studio Pro AI capabilities (translate, summarize, classify, …) | studio | | organization |
+| `pod_get_quota` | Content Pod status, address, items and storage against the plan's limits | pod | | organization |
+| `pod_publish_item` / `pod_unpublish_item` | Put an item on the Content Pod or take it off (confirmation) | pod | | organization |
+| `pod_set_mode` / `pod_set_dynamic_features` | Switch static / dynamic, turn comments, reactions, newsletter, statistics on or off (admins, confirmation) | pod | | organization |
 | `gateway_get_task` / `gateway_list_tasks` / `gateway_cancel_task` | Follow or stop your background tasks | gateway | | organization |
 | `studio_get_translation_status` | How complete each locale of an item is | studio | | organization |
 | `studio_translate_content` | Machine-translate an item into a locale (new version) | studio | | organization |

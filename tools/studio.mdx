@@ -242,6 +242,19 @@ Both accept an `idempotencyKey`: repeating the call returns the same task instea
 
 When your organization's Studio runs the **pro-ai** plugin, its AI capabilities appear as tools — for example `studio_ai_translate`, `studio_ai_summarize`, `studio_ai_classify`, `studio_ai_extract` and `studio_ai_alt_text` (the list comes from your Studio). They run through your organization's AI gateway in Studio: its AI provider, budget, PII redaction and audit apply. They need `studio:write` and the consent class Studio declares (usually *network_call*, so the gateway asks you once per app). Results are AI-generated and marked untrusted.
 
+## Content Pod
+
+Your organization's **Content Pod** is its portable public site — the full content, next to the teasers on the Discovery Nodes. The pod tools work through Studio, on `/mcp/pod` and `/mcp/all`. They appear by themselves as soon as your Studio accepts AI-assistant sign-ins for its Content Pod settings; until then the endpoint lists no tools.
+
+| Tool | What it does | Scope |
+|------|--------------|-------|
+| `pod_get_quota` | Whether a pod is set up, its mode and address, published items and storage against your plan's limits, and which dynamic features are on | `studio:read` |
+| `pod_publish_item` / `pod_unpublish_item` | Put a content item on the pod (or update it) / take it off — **asks you to confirm**. Studio refuses a publish beyond your plan's item or storage limit | `studio:publish` |
+| `pod_set_mode` | Switch between **static** (plain files) and **dynamic** (comments, reactions … need a runtime) — **asks you to confirm** | `studio:admin` |
+| `pod_set_dynamic_features` | Turn `comments` (optionally with moderation `pre` or `post`), `reactions`, `newsletter`, `statistics` on or off; only the features you pass change, their other settings stay — **asks you to confirm** | `studio:admin` |
+
+Mode and feature changes are for organization admins; Studio applies its usual roles.
+
 ## Typed tools: `studio_create_<type>`
 
 On `/mcp/studio`, the gateway adds one **typed** draft tool per content type — for example `studio_create_news` or `studio_create_event`. Its input schema *is* the content type's JSON Schema (with the referenced shared definitions inlined), so the assistant sees every field, type and constraint without reading a schema first.

@@ -29,6 +29,8 @@ Some tools have a tighter limit of their own on top:
 | `studio_publish_content`, `studio_unpublish_content`, `studio_distribute_to_discovery`, `studio_translate_content`, `studio_upload_asset` | 10 |
 | `studio_create_locale_variant` | 20 |
 | `studio_update_asset` | 30 |
+| `pod_publish_item`, `pod_unpublish_item` | 20 |
+| `pod_set_mode`, `pod_set_dynamic_features` | 5 |
 | `cd_export_data`, `gateway_export_my_data` | 2 |
 
 When a limit is reached, the tool answers *"Rate limit exceeded. Retry in N s."* Wait the given number of seconds; windows reset every minute.
@@ -36,6 +38,19 @@ When a limit is reached, the tool answers *"Rate limit exceeded. Retry in N s."*
 <Callout kind="info">
   Operators may add a coarser limit at their reverse proxy and can share the windows across several gateway instances with Redis. The numbers above are the gateway's built-in defaults.
 </Callout>
+
+## Daily data quota
+
+On top of the call limits, the gateway counts the **size of the answers** each app receives per day, again separately for every **account × app** (anonymous use: per network address):
+
+| Who | Data per day |
+|-----|--------------|
+| Signed-in user | 200 MB |
+| Service account | 1 GB |
+| Anonymous (if enabled) | 20 MB |
+| Local sidecar | unlimited |
+
+Once an app has used its share, further calls answer *"The daily data limit for this app is reached. It resets at midnight UTC."* Your other apps keep their own quota. Operators set the numbers with `QUOTA_BYTES_PER_DAY_USER`, `QUOTA_BYTES_PER_DAY_SERVICE` and `QUOTA_BYTES_PER_DAY_ANONYMOUS` (`0` turns the quota off).
 
 ## Result sizes and paging
 

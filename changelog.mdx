@@ -3,6 +3,13 @@ title: Changelog
 description: Release notes of the roadbeat MCP Gateway — new tools and endpoints, sign-in and security changes, and known limitations.
 ---
 
+<Update label="2026-11-09" description="Content Pod tools, daily data quota" tags={["feature", "security"]}>
+## Content Pod through Studio, daily data quota
+
+- **Content Pod:** `pod_get_quota`, `pod_publish_item`, `pod_unpublish_item`, `pod_set_mode` and `pod_set_dynamic_features` manage your organization's public site through Studio, on `/mcp/pod` and `/mcp/all`. Everything that changes the site asks you first. The tools appear once your Studio opens its Content Pod settings to AI assistants. See [Studio › Content Pod](/tools/studio#content-pod).
+- **Daily data quota:** besides calls per minute, each app has a daily budget for the size of its answers (200 MB per account and app by default). See [Rate limits](/accounts/limits#daily-data-quota).
+</Update>
+
 <Update label="2026-11-09" description="Security review" tags={["security"]}>
 ## Internal security review
 
