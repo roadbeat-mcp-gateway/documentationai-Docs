@@ -3,6 +3,15 @@ title: Changelog
 description: Release notes of the roadbeat MCP Gateway — new tools and endpoints, sign-in and security changes, and known limitations.
 ---
 
+<Update label="2026-11-09" description="Security review" tags={["security"]}>
+## Internal security review
+
+- **Approvals need your sign-in:** when the gateway asks you to allow or confirm something, the approval page first asks you to sign in to your roadbeat account (Studio or the web app) and only accepts the decision from that account — an AI app that sees the link cannot approve for you.
+- Confirmations can be used once; a stored result is only ever replayed to the app that made the call, and only with your consent.
+- Machine clients can be registered in Studio (Platform › OAuth clients) with their public keys; tokens for them are only issued to registered, authenticated clients.
+- Consent texts name an app by its verified identity.
+</Update>
+
 <Update label="2026-11-09" description="Bulk jobs, Studio AI, machine clients, performance" tags={["feature", "security"]}>
 ## Background tasks, Studio AI, machine clients, faster catalog
 

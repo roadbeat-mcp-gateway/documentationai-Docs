@@ -34,7 +34,7 @@ A consent is stored for exactly one combination of **you × app × consent class
     - **a link in the tool answer**: *"Consent required. Ask the user to open this link and approve: … It expires in 10 minutes. Then call this tool again with the same arguments."* — a good assistant shows you the link.
   </Step>
   <Step title="You decide on the approval page">
-    The page shows what is requested, the app (OAuth client), which tool triggered it and when the link expires. Choose how long your decision lasts and select **Allow** or **Decline**.
+    First the page asks you to **sign in to your roadbeat account** — the same account the app is connected to (the first time, your account also asks you to allow *roadbeat approvals*). Only that account can decide, so an app that sees the link cannot approve for you. The page then shows what is requested, the app (OAuth client, named by its verified address), which tool triggered it and when the link expires. Choose how long your decision lasts and select **Allow** or **Decline**. The sign-in is remembered for 30 minutes in that browser.
   </Step>
   <Step title="Back in the app">
     Return to the app. It retries the call, which now goes through.

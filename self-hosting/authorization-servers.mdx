@@ -140,7 +140,7 @@ Automation without a person — an ops job exporting the audit log, a monitoring
     Set `OAUTH_CLIENT_CREDENTIALS_SCOPES` to the scopes machine clients may get, e.g. `discovery:read,schema:read,mcp:admin`. Unset keeps the grant off.
   </Step>
   <Step title="Register the client">
-    Add it to `OAUTH_CLIENTS` as a confidential client:
+    In Studio, **Platform › OAuth clients › Register**, choose *Machine client* and paste the client's **public** JWKS (Studio never stores a secret or a private key). Or add it to `OAUTH_CLIENTS` as a confidential client:
 
     ```json
     {"client_id":"ops-export","grant_types":["client_credentials"],"response_types":[],"redirect_uris":[],
