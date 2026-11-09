@@ -64,7 +64,8 @@
               { "title": "Studio", "path": "tools/studio", "icon": "pen-tool" },
               { "title": "Gateway", "path": "tools/gateway", "icon": "user-check" },
               { "title": "Prompts & Skills", "path": "tools/prompts-and-skills", "icon": "sparkles" },
-              { "title": "\"Why am I seeing this?\" Card", "path": "tools/why-card", "icon": "help-circle", "badge": "Beta" }
+              { "title": "\"Why am I seeing this?\" Card", "path": "tools/why-card", "icon": "help-circle", "badge": "Beta" },
+              { "title": "Interactive Cards", "path": "tools/cards", "icon": "layout-dashboard", "badge": "Beta" }
             ]
           },
           {

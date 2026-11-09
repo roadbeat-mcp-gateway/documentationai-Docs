@@ -3,6 +3,13 @@ title: Changelog
 description: Release notes of the roadbeat MCP Gateway — new tools and endpoints, sign-in and security changes, and known limitations.
 ---
 
+<Update label="2026-11-09" description="Interactive cards" tags={["feature"]}>
+## Daily review, bookmarks and publish status as cards
+
+- Three new MCP Apps cards: the **daily review** for `compass_review_today` (with a bookmark button per item), **bookmarks** for `cd_list_bookmarks` (filter by collection, add to collection, create a collection) and **publish status** for publishing in Studio (per Discovery Node, re-checked while pending). See [Interactive Cards](/tools/cards).
+- `cd_add_bookmark`, `cd_add_to_collection` and `cd_create_collection` are now in the core `/mcp` endpoint (16 tools for personal accounts); `cd_add_bookmark` is also on `/mcp/goals`.
+</Update>
+
 <Update label="2026-11-09" description="Anomaly detection" tags={["security", "feature"]}>
 ## Anomaly detection
 

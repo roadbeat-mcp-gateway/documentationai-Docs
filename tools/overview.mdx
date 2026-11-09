@@ -26,9 +26,9 @@ Tools appear only when your account can use them:
 
 | Signed in as | Core `/mcp` | Additionally on `/mcp/all` and server views |
 |--------------|-------------|---------------------------------------------|
-| Personal account (Web Client) | 13 tools | personal-data and Compass tools |
+| Personal account (Web Client) | 16 tools | personal-data and Compass tools |
 | Organization account (Studio) | 10 tools | Studio tools |
-| Local sidecar | 13 tools | personal-data and Compass tools |
+| Local sidecar | 16 tools | personal-data and Compass tools |
 | Anonymous | 8 tools | public tools only (no data-rights tools) |
 
 Operators can switch individual tools, resources and prompts off for their deployment; switched-off entries disappear from every view.
@@ -137,6 +137,9 @@ Resources are read-only documents an app can attach as context. Templates (with 
 | `studio://versions/{contentId}`, `studio://versions/{contentId}/{version}` | Version history of an item and one snapshot | organization |
 | `studio://assets/{id}` | One media library asset | organization |
 | `ui://roadbeat/why-card.html` | The ["why am I seeing this?" card](/tools/why-card) | all (on `/mcp/all`, `/mcp/discovery`, `/mcp/goals`) |
+| `ui://roadbeat/daily-review.html` | The [daily review card](/tools/cards#daily-review) | all (on `/mcp`, `/mcp/all`, `/mcp/goals`) |
+| `ui://roadbeat/bookmarks.html` | The [bookmarks card](/tools/cards#bookmarks) | all (on `/mcp`, `/mcp/all`, `/mcp/cd`) |
+| `ui://roadbeat/publish-status.html` | The [publish status card](/tools/cards#publish-status) | all (on `/mcp/all`, `/mcp/studio`) |
 
 ## Conventions every tool follows
 

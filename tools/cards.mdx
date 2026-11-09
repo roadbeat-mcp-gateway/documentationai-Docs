@@ -1,0 +1,44 @@
+---
+title: Interactive Cards
+description: MCP Apps cards for the Compass daily review, your bookmarks and Studio publishing — what they show, what you can do in them, and how they stay safe.
+---
+
+In clients that support **MCP Apps** (`io.modelcontextprotocol/ui`), some tool results appear as an interactive card in the conversation instead of plain text. Besides the ["why am I seeing this?" card](/tools/why-card), three cards cover everyday tasks:
+
+| Card | Shown for | What you can do in it |
+|------|-----------|-----------------------|
+| **Daily review** | [`compass_review_today`](/tools/compass#compass_review_today) | See what is new for each of your goals; **Bookmark** an item with one click |
+| **Bookmarks** | [`cd_list_bookmarks`](/tools/personal-data#cd_list_bookmarks) | Filter by collection, put a bookmark into a collection, create a new collection |
+| **Publish status** | [`studio_publish_content`, `studio_unpublish_content`, `studio_get_publish_status`](/tools/studio#publishing) | See the item's status and where its teaser is on each Discovery Node; the card checks again while a node is still pending |
+
+## Daily review
+
+For every active goal, highest priority first: the new items with publisher, type and date, a short description, and a **Bookmark** button. A note says when more items are available. Links open through your client.
+
+## Bookmarks
+
+Your bookmarks with a row of collection chips (**All** and each collection with its count) to filter. Each bookmark has an **Add to collection…** menu; **New collection** creates one. Bookmarks whose teaser is gone are marked *no longer available*.
+
+## Publish status
+
+The item's title, status, type, locale and version, then one row per Discovery Node: *published*, *pending*, *unpublished* or *failed*, the teaser id, since when, and the node's last error. After a publish the card asks for the node status itself and checks again every few seconds (up to five times) while a node is still pending; **Check again** refreshes it any time.
+
+## Actions run through your client
+
+When you click a button in a card, the card asks your client to call the corresponding gateway tool — `cd_add_bookmark`, `cd_add_to_collection`, `cd_create_collection` or `studio_get_publish_status`. Everything that applies when the assistant calls a tool applies here too: your **consent** for the app (the first bookmark may ask you), **rate limits** and the **audit log**. If an action is refused, the card shows the reason next to the button.
+
+The bookmark tools are part of the core `/mcp` endpoint, so these cards work there as well as on `/mcp/cd`, `/mcp/goals` and `/mcp/all`. The publish status card is available on `/mcp/studio` and `/mcp/all`.
+
+## Built to be safe
+
+- Each card is one self-contained HTML file served as a `ui://roadbeat/…` resource (`text/html;profile=mcp-app`). It loads nothing from other websites, so it works under the strictest content security policy a client applies, and it needs no form or pop-up permissions.
+- Publisher and user text is rendered strictly as text — titles or descriptions can never inject markup or scripts.
+- The cards follow your client's light or dark theme and work with the keyboard and a screen reader (labelled buttons and menus, announced status messages).
+
+## Without MCP Apps
+
+Clients without the extension get the same results as structured data and text. The assistant can do the same actions by calling the tools when you ask it to.
+
+<Callout kind="info">
+  The cards are a **beta**. They were tested in a browser with a simulated MCP Apps host (light and dark, every action); verification in Claude and ChatGPT is still pending.
+</Callout>
