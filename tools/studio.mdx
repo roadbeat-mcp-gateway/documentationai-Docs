@@ -203,6 +203,30 @@ The answer lists the outcome per node — `success`, `failed` (with the error) o
   If a write times out, the gateway tells you that the change **may** still have been saved. Check with `studio_list_content` or `studio_get_content`, or repeat the call with the same `idempotencyKey` — never just call again with a new key.
 </Callout>
 
+## Reviewing
+
+### `studio_compare_versions`
+
+What changed between two versions of a content item, field by field. Localized fields are compared per locale (`title.de`), lists as a whole; long values are shortened.
+
+<ParamField body="id" param-type="string" required="true">Content id.</ParamField>
+<ParamField body="from" param-type="integer">Older version (default: the version before `to`).</ParamField>
+<ParamField body="to" param-type="integer">Newer version (default: the current state).</ParamField>
+
+The answer lists `changes[]` (`path`, `change` = `added` / `removed` / `changed`, `before`, `after`) and `retainedVersions` — Studio keeps the latest ten versions. Scope `studio:read`. Available without Studio Pro.
+
+### Editorial workflow (Studio Pro)
+
+These tools appear only when your organization's Studio runs the **pro-workflows** plugin (the gateway checks Studio's plugin list; changes show up within five minutes).
+
+| Tool | What it does | Scope |
+|------|--------------|-------|
+| `studio_get_workflow` | Workflow, current state, whether it allows publishing, the possible next steps (with required roles and whether a comment is needed), the last ten history entries | `studio:read` |
+| `studio_request_review` | Takes the step out of the current state whose action or target mentions *review* (e.g. *Submit for review*); optional `comment` | `studio:write` |
+| `studio_approve_review` | Takes the step whose action or target mentions *approve*; **asks you to confirm**; optional `comment` | `studio:write` |
+
+Studio enforces the workflow's rules for AI assistants exactly as for people: role gates, mandatory comments, and — when your workflow is set up that way — that nobody approves their own work. Starting a workflow and other steps (for example sending back to draft) stay in Studio.
+
 ## Typed tools: `studio_create_<type>`
 
 On `/mcp/studio`, the gateway adds one **typed** draft tool per content type — for example `studio_create_news` or `studio_create_event`. Its input schema *is* the content type's JSON Schema (with the referenced shared definitions inlined), so the assistant sees every field, type and constraint without reading a schema first.
@@ -231,4 +255,4 @@ The same data as the read tools, addressable by URI so an app can attach it as c
 
 ## Not available yet
 
-Distribution to a selected subset of Discovery Nodes, changing the organization's locale settings, deleting assets, Studio prompts and the Pro editorial workflow tools (review, approval, version comparison) are planned for later releases.
+Distribution to a selected subset of Discovery Nodes, changing the organization's locale settings, deleting assets, and starting workflows or taking other workflow steps are planned for later releases. Editorial prompts and skills: see [Prompts & Skills](/tools/prompts-and-skills).

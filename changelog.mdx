@@ -11,6 +11,7 @@ description: Release notes of the roadbeat MCP Gateway — new tools and endpoin
 - **Automatic erasure:** deleting a roadbeat account (Studio or web app) now erases it at the gateway too (`POST /api/v1/me/erase`, only for the roadbeat services themselves) and disconnects its AI apps.
 - **Studio audit:** changes an AI assistant makes through the gateway are marked as such in Studio's events and the Pro audit log.
 - **Conformance:** the official MCP conformance suite runs on every build.
+- **Reviewing:** `studio_compare_versions` (field-level diff of two versions), and with Studio Pro's workflow plugin `studio_get_workflow`, `studio_request_review` and `studio_approve_review` (asks you to confirm). See [Studio](/tools/studio#reviewing).
 </Update>
 
 <Update label="2026-11-09" description="The hosted gateway is live" tags={["feature"]}>
