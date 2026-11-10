@@ -94,7 +94,7 @@ Developers running a gateway on `localhost` without an authorization server can 
 
 ```bash
 pnpm dev:token -- --sub alice --client claude-code --scope "discovery:read schema:read cd:read:public"
-claude mcp add --transport http roadbeat-dev http://localhost:3700/mcp --header "Authorization: Bearer <token>"
+claude mcp add --transport http roadbeat-dev http://localhost:3900/mcp --header "Authorization: Bearer <token>"
 ```
 
 Development tokens are rejected in production. See [Authorization Servers](/self-hosting/authorization-servers#development-tokens).

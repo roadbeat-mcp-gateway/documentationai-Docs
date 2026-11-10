@@ -199,7 +199,7 @@ For local development without an authorization server, the gateway repository ca
 
 ```bash
 pnpm dev:token -- --sub alice --client claude-code --scope "discovery:read schema:read cd:read:public"
-# options: --aud http://localhost:3700/mcp  --ttl 3600  --org org-1  --name "Alice"
+# options: --aud http://localhost:3900/mcp  --ttl 3600  --org org-1  --name "Alice"
 ```
 
 The first run writes a key pair to `.dev/`; point `AUTH_DEV_JWKS_FILE` at `.dev/dev-jwks.json`. Tokens use the issuer `roadbeat-dev` and are **ignored in production**.

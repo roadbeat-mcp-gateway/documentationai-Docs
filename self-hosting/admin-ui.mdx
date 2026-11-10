@@ -46,7 +46,7 @@ The UI signs in with **OAuth 2.1 authorization code + PKCE** as a public client 
   </Step>
   <Step title="Let Studio know the UI's client">
     - **HTTPS gateways:** nothing to register. The UI's client id is a Client ID Metadata Document the gateway serves itself at `${PUBLIC_BASE_URL}/admin/oauth-client.json`; Studio fetches it (keep `OAUTH_CIMD_ENABLED=true` at Studio).
-    - **Plain HTTP (local development):** register a client in Studio under **Platform admin › OAuth clients** — client id `roadbeat-mcp-gateway-admin`, type *web*, redirect URI `${PUBLIC_BASE_URL}/admin/callback` (e.g. `http://localhost:3700/admin/callback`). Use `ADMIN_UI_CLIENT_ID` for a different id.
+    - **Plain HTTP (local development):** register a client in Studio under **Platform admin › OAuth clients** — client id `roadbeat-mcp-gateway-admin`, type *web*, redirect URI `${PUBLIC_BASE_URL}/admin/callback` (e.g. `http://localhost:3900/admin/callback`). Use `ADMIN_UI_CLIENT_ID` for a different id.
   </Step>
   <Step title="Route /admin">
     Publish `/admin` and `/admin/*` through your reverse proxy along with `/api/v1/admin/*` and `/api/v1/admin-ui/config`. Restrict them to your admin network if you can.

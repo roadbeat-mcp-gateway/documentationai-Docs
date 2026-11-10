@@ -543,7 +543,7 @@ doc.info = {
 doc.servers = [
   { url: 'https://mcp.roadbeat.net', description: 'roadbeat (hosted)' },
   { url: 'https://{gateway}', description: 'Self-hosted gateway', variables: { gateway: { default: 'mcp.example.com', description: 'Host of your MCP Gateway' } } },
-  { url: 'http://localhost:3700', description: 'Local development' },
+  { url: 'http://localhost:3900', description: 'Local development' },
 ];
 doc.tags = [
   { name: 'admin', description: 'Gateway administration (`mcp:admin`).' },
