@@ -3,6 +3,14 @@ title: Changelog
 description: Release notes of the roadbeat MCP Gateway — new tools and endpoints, sign-in and security changes, and known limitations.
 ---
 
+<Update label="2026-11-11" description="Disconnected personal access tokens stop at the gateway" tags={["security"]}>
+## Disconnect stops a personal access token everywhere
+
+- Until now the gateway accepted a token by its signature and expiry. A [personal access token](/accounts/access-tokens) lives up to 365 days, so after **Disconnect** in Studio it could still use public tools until it expired (your organization's content was refused at once).
+- The gateway now asks the issuing authorization server whether such a token is still connected and keeps the answer for a minute: a disconnected token is refused within about a minute, with *"This access token was disconnected in roadbeat"*.
+- New settings `AUTH_STATUS_CHECK_CLIENTS` and `AUTH_STATUS_CACHE_SEC` — see [Configuration](/self-hosting/configuration). Studio's authorization server offers the check at `/oauth/token-status` (`roadbeat_token_status_endpoint` in its metadata), for the gateway's own client only.
+</Update>
+
 <Update label="2026-11-11" description="Personal access tokens, organization sign-in apps" tags={["feature", "security"]}>
 ## Tokens for your own scripts, sign-in apps per organization
 

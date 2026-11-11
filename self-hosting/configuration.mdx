@@ -43,6 +43,8 @@ The gateway is configured entirely through environment variables. They are valid
 | `AUTH_ALLOW_ANONYMOUS` | `false` | Accept requests without a token as an anonymous principal (public reads only). Clients then never see a `401` and will not offer sign-in. |
 | `AUTH_ACCEPT_ROOT_AUDIENCE` | `true` | Accept a token issued for `/mcp` on every view (`/mcp/all`, `/mcp/{server}`). `false` requires a token per view. |
 | `AUTH_CLOCK_TOLERANCE_SEC` | `30` | Allowed clock skew for token times (0–300). |
+| `AUTH_STATUS_CHECK_CLIENTS` | `roadbeat-personal-access` | Comma-separated client ids whose tokens the gateway checks at their roadbeat authorization server on use — long-lived [personal access tokens](/accounts/access-tokens), so that **Disconnect** stops them at the gateway too. Uses the authorization server's `roadbeat_token_status_endpoint` with the gateway's own client (`GATEWAY_OAUTH_KEY`); an authorization server without that endpoint is not asked. If it cannot be reached, an earlier "still connected" counts for 10 minutes, then the token is refused. Empty: off. |
+| `AUTH_STATUS_CACHE_SEC` | `60` | How long an answer of that check is reused (5–600 seconds) — the longest a disconnected token still passes. |
 | `AUTH_DEV_JWKS_FILE` | — | Development only: public keys written by `pnpm dev:token`; registers the issuer `roadbeat-dev`. **Ignored in production.** |
 | `REQUEST_STATE_SECRET` | random per process | HMAC key (≥ 32 bytes) for MRTR request state and approval links. **Required in production** and identical on all instances; a random key breaks pending approvals on restart. |
 

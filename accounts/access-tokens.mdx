@@ -72,11 +72,10 @@ Send the token as a bearer token to the gateway URL Studio showed you (for roadb
 
 Your tokens are listed under **Profile › Connected AI apps** with their name and expiry date, next to the AI apps you signed in.
 
-Select **Disconnect** to revoke a token. From that moment on, the token can no longer reach your organization's content: the gateway reaches Studio only through a token exchange, and Studio refuses it for a disconnected token.
+Select **Disconnect** to revoke a token:
 
-<Callout kind="info">
-  Until it expires, a disconnected token is still accepted by the gateway itself for **public** tools — searching public roadbeat content and reading content types, which anyone can do. It no longer reaches anything of your organization.
-</Callout>
+- It can no longer reach your organization's content **at once** — the gateway reaches Studio only through a token exchange, and Studio refuses it for a disconnected token.
+- Within **about a minute** the gateway refuses the token altogether, public tools included: for personal access tokens it asks Studio whether the token is still connected and keeps the answer for a minute.
 
 A token cannot be renewed. When it expires, create a new one and replace it in your tool.
 
