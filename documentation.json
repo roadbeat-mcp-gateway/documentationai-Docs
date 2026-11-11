@@ -45,6 +45,7 @@
             "icon": "key",
             "pages": [
               { "title": "Accounts & Sign-in", "path": "accounts/sign-in", "icon": "log-in" },
+              { "title": "Personal Access Tokens", "path": "accounts/access-tokens", "icon": "key-round" },
               { "title": "Scopes", "path": "accounts/scopes", "icon": "list-checks" },
               { "title": "Consent & Confirmations", "path": "accounts/consent", "icon": "shield-check" },
               { "title": "Rate Limits & Retries", "path": "accounts/limits", "icon": "gauge" }

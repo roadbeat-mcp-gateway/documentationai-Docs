@@ -171,6 +171,12 @@ The gateway's own [admin UI](/self-hosting/admin-ui) is such a client too: on an
       -H "Authorization: Bearer <platform admin token>" -H "Content-Type: application/json" \
       -d '{"client_id":"chatgpt-connector","client_name":"ChatGPT","redirect_uris":["<callback URL shown in the ChatGPT connector form>"],"application_type":"web"}'
     ```
+
+    **Organization admins** register their organization's own sign-in apps without a platform admin: **Settings › Sign-in apps** (also linked from *Profile › Connected AI apps*), or `POST /api/v1/manage/org-oauth-clients` with the same fields. Such a client belongs to the organization (`rb_organization_id` in its metadata):
+
+    - only **members of that organization** can sign in through it — anyone else is refused at sign-in;
+    - organization admins see, change and delete only their own organization's clients;
+    - it is always a sign-in app (PKCE, no secret) — [machine clients](#machine-clients) stay with the platform admins.
   </Tab>
   <Tab title="Web Client" icon="user">
     ```bash

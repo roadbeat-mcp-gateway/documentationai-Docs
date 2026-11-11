@@ -1,0 +1,92 @@
+---
+title: Personal Access Tokens
+description: Connect your own scripts and tools to the roadbeat MCP Gateway without a browser sign-in — create a Studio access token, choose its access and lifetime, and revoke it.
+---
+
+Some tools cannot run a browser sign-in: an import script, a scheduled job, an agent on a server. For those, create a **personal MCP access token** in Studio. The tool sends it with every request and acts as you, within your role.
+
+<Callout kind="info">
+  Personal access tokens are available for **organization accounts (Studio)**. AI apps such as Claude, ChatGPT or Cursor do not need one — they sign in through the browser, see [Accounts & Sign-in](/accounts/sign-in).
+</Callout>
+
+## Create a token
+
+<Steps>
+  <Step title="Open Connected AI apps">
+    In Studio, open your **Profile › Connected AI apps** and select **Create MCP access token**.
+  </Step>
+  <Step title="Name it">
+    Give it a name you will recognize later, for example *Import script*. The name is shown in the list of connected apps.
+  </Step>
+  <Step title="Choose access and lifetime">
+    Choose what the token may do (see below) and how long it is valid: **7, 30, 90 or 365 days**.
+  </Step>
+  <Step title="Copy the token">
+    Copy the token right away — **it is shown only once**. Studio also shows the gateway URL to send it to.
+  </Step>
+</Steps>
+
+### Access levels
+
+| Access | What the token can do | Scopes |
+|--------|-----------------------|--------|
+| **Read** | Search roadbeat content, read content types, read your organization's content | `discovery:read`, `schema:read`, `studio:read` |
+| **Read and write drafts** | + create and edit drafts | + `studio:write` |
+| **Read, write and publish** | + publish and unpublish | + `studio:publish` |
+
+Your **role caps** the token: a viewer's token never gets `studio:write`, whatever access was chosen. The role is checked again every time the gateway reaches Studio — if your role is lowered, the token can do less from that moment on. See [Scopes](/accounts/scopes) for the tools behind each scope.
+
+Like any connected app, the token goes through the gateway's [consent and confirmations](/accounts/consent):
+
+- **Reading** your organization's content needs no consent.
+- The first time the token **writes drafts**, the tool answer contains an approval link. Open it, sign in to the same Studio account and allow — choose *For 30 days* or *Until I revoke it* for a script that runs unattended. Then run the call again.
+- **Publishing and deleting** ask for a confirmation on every call. A script can prepare drafts on its own; publishing them needs you.
+
+## Use the token
+
+Send the token as a bearer token to the gateway URL Studio showed you (for roadbeat's own gateway `https://mcp.roadbeat.net/mcp`).
+
+<Tabs>
+  <Tab title="Claude Code" icon="terminal">
+    ```bash
+    claude mcp add --transport http roadbeat https://mcp.roadbeat.net/mcp \
+      --header "Authorization: Bearer $ROADBEAT_MCP_TOKEN"
+    ```
+  </Tab>
+  <Tab title="MCP client library" icon="code">
+    Most MCP client libraries accept extra request headers for the Streamable HTTP transport. Set:
+
+    ```text
+    Authorization: Bearer <your token>
+    ```
+
+    No OAuth flow is needed — the gateway accepts the token directly. See [Custom agents](/connect/mcp-inspector#custom-agents) for the protocol details.
+  </Tab>
+</Tabs>
+
+<Callout kind="alert">
+  Treat the token like a password: keep it in a secret store or an environment variable, never in source code or a shared document. Choose the shortest lifetime and the lowest access that does the job.
+</Callout>
+
+## See and revoke tokens
+
+Your tokens are listed under **Profile › Connected AI apps** with their name and expiry date, next to the AI apps you signed in.
+
+Select **Disconnect** to revoke a token. From that moment on, the token can no longer reach your organization's content: the gateway reaches Studio only through a token exchange, and Studio refuses it for a disconnected token.
+
+<Callout kind="info">
+  Until it expires, a disconnected token is still accepted by the gateway itself for **public** tools — searching public roadbeat content and reading content types, which anyone can do. It no longer reaches anything of your organization.
+</Callout>
+
+A token cannot be renewed. When it expires, create a new one and replace it in your tool.
+
+## Related
+
+<Columns cols={2}>
+  <Card title="Sign-in apps for your organization" icon="building-2" href="/self-hosting/authorization-servers#pre-register-clients">
+    Tools that should sign members in through the browser instead: organization admins register them under **Settings › Sign-in apps**.
+  </Card>
+  <Card title="Scopes" icon="key" href="/accounts/scopes">
+    Which tools each scope unlocks.
+  </Card>
+</Columns>

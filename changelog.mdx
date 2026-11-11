@@ -3,6 +3,13 @@ title: Changelog
 description: Release notes of the roadbeat MCP Gateway — new tools and endpoints, sign-in and security changes, and known limitations.
 ---
 
+<Update label="2026-11-11" description="Personal access tokens, organization sign-in apps" tags={["feature", "security"]}>
+## Tokens for your own scripts, sign-in apps per organization
+
+- **Personal access tokens (Studio):** *Profile › Connected AI apps › Create MCP access token* — for scripts and jobs that cannot run a browser sign-in. Choose **Read**, **Read and write drafts** or **Read, write and publish** and a lifetime of 7–365 days; your role caps what the token can do. The token is shown once, listed with its expiry under *Connected AI apps* and revoked with **Disconnect**. See [Personal Access Tokens](/accounts/access-tokens).
+- **Sign-in apps for an organization:** organization admins register their own OAuth clients under *Settings › Sign-in apps* (`/api/v1/manage/org-oauth-clients`) without a platform admin. Only members of that organization can sign in through them; machine clients stay platform-only. See [Pre-register clients](/self-hosting/authorization-servers#pre-register-clients).
+</Update>
+
 <Update label="2026-11-09" description="Interactive cards" tags={["feature"]}>
 ## Daily review, bookmarks and publish status as cards
 
